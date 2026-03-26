@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit, prange
-from baseflow.utils import moving_average, multi_arange, backward
+from pybaseflow.utils import moving_average, multi_arange, backward
 
 
 def recession_coefficient(Q, strict):
