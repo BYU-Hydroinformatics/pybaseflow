@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybaseflow"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A comprehensive Python toolkit for baseflow separation"
 readme = "README.md"
 license = "MIT"
@@ -36,6 +36,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["pybaseflow*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pybaseflow.__version__"}
 
 [tool.setuptools.package-data]
 pybaseflow = ["data/*.csv", "data/*.md"]
