@@ -14,10 +14,10 @@ Strip pybaseflow down to a clean, focused Python package for running baseflow se
 |---|---|
 | `baseflow/read_npz.py` | Only reads `thawed.npz`, a study artifact |
 | `baseflow/thawed.npz` | Global thaw/freeze raster data used in the study |
-| `baseflow/example.csv` | Study-specific example stations; replace later with a minimal example if needed |
-| `docs/` (entire folder) | Will be rewritten from scratch |
-| `mkdocs.yml` | Old docs config |
-| `readthedocs.yml` | Old docs config |
+| `baseflow/example.csv` | Study-specific example stations; replaced with new sample data in Phase 4 |
+| `docs/` (entire folder) | Will be rebuilt from scratch in Phase 6 |
+| `mkdocs.yml` | Old docs config; replaced in Phase 6 |
+| `readthedocs.yml` | Old docs config; replaced in Phase 6 |
 
 ### Functions/code to remove
 
@@ -125,6 +125,25 @@ After removals, what remains:
 3. Pin minimum Python version to 3.9+.
 4. Add a proper `__version__` in `__init__.py`.
 5. Add a `py.typed` marker if type hints are added.
+6. **Bundle sample data** in `pybaseflow/data/`:
+   - A small daily streamflow CSV (1-3 years) from a USGS gauge with public-domain data (e.g., NWIS). Include date, discharge, and ideally specific conductance for CMB examples.
+   - A convenience loader: `pybaseflow.load_sample_data()` returning a numpy array (or dict with Q, dates, and optionally SC).
+   - Keep the data file small (<500 KB) and include it in `package_data`.
+   - Document the gauge ID, period, and source in a `data/README.md`.
+7. **USGS data retrieval** — add `pybaseflow.fetch_usgs(site_id, start_date, end_date, parameter='discharge')` that pulls daily values from the USGS NWIS Water Services API:
+   - Use the NWIS daily values REST endpoint (`https://waterservices.usgs.gov/nwis/dv/`)
+   - Support parameter codes: `'00060'` (discharge) and `'00095'` (specific conductance)
+   - Accept a convenience `parameter` kwarg mapping `'discharge'` → `'00060'`, `'sc'` → `'00095'`
+   - Return a dict with `dates` (array of datetime), `Q` (numpy array in cms or cfs with a `units` field), and optionally `SC`
+   - Use only stdlib (`urllib`) to avoid adding a requests dependency; or make it an optional dependency
+   - Handle common issues: missing days, provisional data flags, ice-affected flags, zero-flow padding
+   - Place in `pybaseflow/io.py` as a standalone module
+   - Example usage:
+     ```python
+     from pybaseflow.io import fetch_usgs
+     data = fetch_usgs('01013500', '2015-01-01', '2020-12-31')
+     b = pybaseflow.eckhardt(data['Q'], a=0.98, BFImax=0.8)
+     ```
 
 ---
 
@@ -600,9 +619,22 @@ The refactored pybaseflow package will offer methods spanning four distinct para
    b. **CMB** + `calibrate_eckhardt_from_cmb()` — new paradigm, tracer-based, calibration bridge
    c. **BFlow recession analysis** — SWAT interoperability, builds on existing lh_multi()
    d. **IHACRES** — extends Boughton with one additional parameter
-5. **Phase 6 — Documentation and journal article**
-   - Comprehensive docstrings with references for all methods
-   - Unified notation across all method descriptions
-   - Worked examples with real hydrograph data
-   - Method comparison / benchmarking suite
-   - Journal article describing pybaseflow's scope, taxonomy, and implementation
+5. **Phase 6 — Rebuild documentation from scratch**
+   a. **Docs infrastructure** — set up MkDocs with Material theme, `mkdocstrings` for auto-generated API reference, `pyproject.toml` integration, and GitHub Pages deployment
+   b. **API reference** — auto-generate from docstrings; ensure every public function has a complete docstring with parameters, return type, equation, and literature reference
+   c. **Method guide** — a narrative page for each method category (digital filters, graphical/recession, tracer-based) explaining the theory, when to use each method, and how they relate to each other; include the two-family filter taxonomy (gamma=0 vs gamma=1)
+   d. **Getting started** — installation, minimal example (load a hydrograph, run a filter, plot the result), and a quick comparison of 3-4 methods on the same data
+   e. **Worked examples** — Jupyter notebooks or literate docs showing:
+      - Single-method usage for each method
+      - Multi-method comparison on a real hydrograph
+      - Parameter calibration workflow (recession coefficient → filter parameters)
+      - CMB-to-Eckhardt calibration pipeline
+      - BFlow recession analysis for SWAT users
+   f. **Parameter selection guide** — practical guidance on choosing filter parameters, recession coefficient estimation, BFImax estimation, and when default values are appropriate
+   g. **Method comparison table** — a single reference page listing every method with its equation, parameters, type, reference, and recommended use case
+   h. **Contributing guide** — how to add a new filter method using the `_recursive_digital_filter()` core
+   i. **Unified notation** — consistent variable names across all docs (Q for streamflow, b for baseflow, a/k for recession coefficient, etc.)
+6. **Phase 7 — Journal article**
+   - Describing pybaseflow's scope, taxonomy, and implementation
+   - Method comparison / benchmarking suite with real hydrograph data
+   - Positioning relative to existing tools (USGS HYSEP, PART, BFlow, R packages)
