@@ -1,0 +1,58 @@
+site_name: pybaseflow
+site_description: A comprehensive Python toolkit for baseflow separation
+repo_url: https://github.com/njones61/pybaseflow
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: light blue
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+    - toc.integrate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            heading_level: 3
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Methods:
+    - Overview: methods/overview.md
+    - Recursive Digital Filters: methods/digital-filters.md
+    - Graphical and Recession Methods: methods/graphical-methods.md
+    - Tracer-Based Methods: methods/tracer-methods.md
+    - Recession Analysis: methods/recession-analysis.md
+  - Guides:
+    - Parameter Estimation: guides/parameter-estimation.md
+    - USGS Data Retrieval: guides/usgs-data.md
+    - CMB Calibration Bridge: guides/cmb-calibration.md
+  - API Reference: api.md
