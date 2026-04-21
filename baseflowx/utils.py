@@ -1,5 +1,4 @@
 import numpy as np
-from numba import njit
 
 
 def clean_streamflow(series):
@@ -25,7 +24,6 @@ def moving_average(x, w):
     return res[w - 1:-w + 1]
 
 
-@njit
 def multi_arange(starts, stops):
     """
     Generates a 1D numpy array containing all integers between the given start and stop values for each element in the input arrays.
@@ -47,7 +45,6 @@ def multi_arange(starts, stops):
     return res
 
 
-@njit
 def backward(Q, b_LH, a):
     """
     Calculates the baseflow time series `b` from the discharge time series `Q` and the baseflow time series `b_LH` using a backward recursive approach.

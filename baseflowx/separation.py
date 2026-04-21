@@ -1,5 +1,4 @@
 import numpy as np
-from numba import njit, prange
 
 
 # ---------------------------------------------------------------------------
@@ -469,11 +468,10 @@ def fixed(Q, area=None):
     return _fixed_interpolation(Q, inN)
 
 
-@njit
 def _fixed_interpolation(Q, inN):
     b = np.zeros(Q.shape[0])
     n = Q.shape[0] // inN
-    for i in prange(n):
+    for i in range(n):
         b[inN * i:inN * (i + 1)] = np.min(Q[inN * i:inN * (i + 1)])
     if n * inN != Q.shape[0]:
         b[n * inN:] = np.min(Q[n * inN:])
@@ -499,7 +497,7 @@ def slide(Q, area):
 
 def _slide_interpolation(Q, inN):
     b = np.zeros(Q.shape[0])
-    for i in prange(np.int64((inN - 1) / 2), np.int64(Q.shape[0] - (inN - 1) / 2)):
+    for i in range(np.int64((inN - 1) / 2), np.int64(Q.shape[0] - (inN - 1) / 2)):
         b[i] = np.min(Q[np.int64(i - (inN - 1) / 2):np.int64(i + (inN + 1) / 2)])
     b[:np.int64((inN - 1) / 2)] = np.min(Q[:np.int64((inN - 1) / 2)])
     b[np.int64(Q.shape[0] - (inN - 1) / 2):] = np.min(
@@ -531,10 +529,9 @@ def local(Q, b_LH, area=None, return_exceed=False):
     return b
 
 
-@njit
 def _local_turn(Q, inN):
     idx_turn = np.zeros(Q.shape[0], dtype=np.int64)
-    for i in prange(np.int64((inN - 1) / 2), np.int64(Q.shape[0] - (inN - 1) / 2)):
+    for i in range(np.int64((inN - 1) / 2), np.int64(Q.shape[0] - (inN - 1) / 2)):
         if Q[i] == np.min(Q[np.int64(i - (inN - 1) / 2):np.int64(i + (inN + 1) / 2)]):
             idx_turn[i] = i
     return idx_turn[idx_turn != 0]
@@ -567,17 +564,15 @@ def ukih(Q, b_LH, return_exceed=False):
     return b
 
 
-@njit
 def _ukih_turn(Q, idx_min):
     idx_turn = np.zeros(idx_min.shape[0], dtype=np.int64)
-    for i in prange(idx_min.shape[0] - 2):
+    for i in range(idx_min.shape[0] - 2):
         if ((0.9 * Q[idx_min[i + 1]] < Q[idx_min[i]]) &
                 (0.9 * Q[idx_min[i + 1]] < Q[idx_min[i + 2]])):
             idx_turn[i] = idx_min[i + 1]
     return idx_turn[idx_turn != 0]
 
 
-@njit
 def _linear_interpolation(Q, idx_turn, return_exceed=False):
     if return_exceed:
         b = np.zeros(Q.shape[0] + 1)
@@ -834,7 +829,6 @@ def bn77(Q, L_min, snow_freeze_period, observational_precision, quantile=0.9):
     return drought_flow_points
 
 
-@njit
 def _estimate_recession_slope(Q):
     """Estimate recession slope S(t) = (Q(t-1) - Q(t+1)) / 2."""
     N = len(Q)

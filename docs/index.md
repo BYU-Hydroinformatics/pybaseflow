@@ -1,6 +1,6 @@
 # baseflowx
 
-**baseflowx** is a comprehensive Python toolkit for baseflow separation from streamflow hydrographs. It implements 17 separation methods spanning four paradigms, unified under a common API and accelerated with Numba where it matters. Whether you need a quick Eckhardt filter for a single gauge or a systematic multi-method comparison across hundreds of sites, baseflowx provides the tools to get there with minimal boilerplate.
+**baseflowx** is a comprehensive Python toolkit for baseflow separation from streamflow hydrographs. It implements 17 separation methods spanning four paradigms, unified under a common API. Whether you need a quick Eckhardt filter for a single gauge or a systematic multi-method comparison across hundreds of sites, baseflowx provides the tools to get there with minimal boilerplate.
 
 ```bash
 pip install baseflowx

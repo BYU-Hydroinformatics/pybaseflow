@@ -33,22 +33,22 @@ USGS NWIS  ──dataretrieval──>  Streamlit app  ──baseflowx──>  Pl
 ```
 
 - **Data source:** `dataretrieval.nwis.get_dv` (daily values service). No API key needed.
-- **Compute:** in-process call to `baseflowx`. For daily series (<30 years = ~11k points) every method runs well under a second even without numba.
+- **Compute:** in-process call to `baseflowx`. For daily series (<30 years = ~11k points) every method runs well under a second.
 - **Caching:** `@st.cache_data` on the NWIS fetch keyed by `(site_id, start, end)` so the same gage doesn't re-download.
 - **Plotting:** Plotly (interactive zoom/pan matters for hydrographs) over Matplotlib.
 
 ---
 
-## Prerequisite: make numba optional
+## Prerequisite: drop numba entirely (shipped in 0.2.1)
 
-Blocker for clean cloud deploys and for an eventual Pyodide port. Small change:
+Benchmarks on realistic daily series showed numba wasn't paying for itself:
 
-- `baseflowx/separation.py`, `estimate.py`, `utils.py`: replace `from numba import njit, prange` with a try/except shim — `njit` becomes an identity decorator and `prange = range` when numba is absent.
-- `pyproject.toml`: move `numba` from `dependencies` to `[project.optional-dependencies].speed`.
-- Document `pip install baseflowx[speed]` in README for users who want the JIT.
-- Ship as `baseflowx 0.2.1`.
+- The slowest methods (`part`, `bflow`) are pure numpy and got zero speedup.
+- Methods numba did help (`fixed`, `local`, `ukih`) were already sub-millisecond at 20-year scale.
+- Cold-start JIT compile cost ~1.5s (first `fixed`: 1028 ms, first `local`: 345 ms, first `ukih`: 106 ms) — bad for Streamlit cold wakes and Pyodide.
+- Removing numba trimmed `import baseflowx` from 814 ms to 340 ms and left steady-state totals within ~30 ms at 20-year scale.
 
-Verify: existing test suite passes with `numba` uninstalled.
+So instead of an optional `[speed]` extra (which would over-promise), numba was removed: `@njit` decorators stripped, `prange` → `range`, `numba` dropped from `pyproject.toml`. Shipped as `baseflowx 0.2.1`.
 
 ---
 
@@ -68,7 +68,7 @@ Main pane:
 ## Phases
 
 1. **Rename `pybaseflow` → `baseflowx`** — see `plan_rename.md`. Ship `baseflowx 0.2.0` + deprecation shim `pybaseflow 0.2.0`.
-2. **Numba-optional refactor** (prerequisite above). Ship `baseflowx 0.2.1`.
+2. **Drop numba** (prerequisite above). Shipped as `baseflowx 0.2.1`.
 3. **Scaffold Streamlit app** in a `/webapp` folder of the `baseflowx` repo.
    - `streamlit_app.py`, `requirements.txt` pinning `baseflowx>=0.2.1`.
    - Minimal working version: one gage, one method, one chart.
