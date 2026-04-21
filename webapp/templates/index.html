@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Baseflow Explorer</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
@@ -17,7 +15,23 @@
   </header>
 
   <main>
-    <div id="map"></div>
+    <div id="workspace">
+      <div id="map"></div>
+
+      <section id="analysis-panel" class="hidden" aria-label="Analysis">
+        <div class="analysis-header">
+          <span id="analysis-title">Analysis</span>
+          <div class="analysis-actions">
+            <button id="toggle-yaxis" class="icon-btn" title="Toggle linear/log y-axis" aria-label="Toggle log">log</button>
+            <button id="expand-analysis" class="icon-btn" title="Toggle fullscreen" aria-label="Toggle fullscreen">⤢</button>
+            <button id="close-analysis" class="icon-btn" title="Close" aria-label="Close analysis">×</button>
+          </div>
+        </div>
+        <div class="analysis-body">
+          <div id="chart"></div>
+        </div>
+      </section>
+    </div>
 
     <aside id="panel" class="hidden">
       <button class="close-btn" aria-label="Close">&times;</button>
@@ -58,19 +72,18 @@
           </label>
         </details>
 
-        <button type="submit" class="primary">Run analysis</button>
+        <div id="status"></div>
       </form>
 
-      <div id="status"></div>
-      <div id="summary"></div>
-      <div id="chart"></div>
-      <div id="bfi-panel"></div>
-      <button id="download-csv" class="hidden">Download CSV</button>
+      <div id="results" class="hidden">
+        <div id="summary"></div>
+        <div id="bfi-panel"></div>
+        <button id="download-csv" class="hidden">Download CSV</button>
+      </div>
     </aside>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script>
     window.METHOD_LABELS = {

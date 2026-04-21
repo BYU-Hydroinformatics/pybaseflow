@@ -4,7 +4,10 @@ const MAP_CENTER = [39.5, -98.5];
 const MAP_ZOOM = 4;
 const FIVE_YEARS_MS = 5 * 365.25 * 24 * 3600 * 1000;
 
-const map = L.map("map", { zoomControl: true }).setView(MAP_CENTER, MAP_ZOOM);
+const map = L.map("map", {
+  zoomControl: true,
+  preferCanvas: true,  // all vector layers render to a single canvas, fast for 9500 markers
+}).setView(MAP_CENTER, MAP_ZOOM);
 
 const basemaps = {
   "ArcGIS Topo": L.tileLayer(
@@ -30,7 +33,7 @@ const basemaps = {
 basemaps["ArcGIS Topo"].addTo(map);
 L.control.layers(basemaps, null, { position: "topright" }).addTo(map);
 
-const markers = L.markerClusterGroup({ maxClusterRadius: 40, chunkedLoading: true });
+const markers = L.layerGroup().addTo(map);
 let selectedLayer = null;
 const sitesByNo = new Map();
 
@@ -41,14 +44,13 @@ fetch("/sites.json")
       if (s.dec_lat_va == null || s.dec_long_va == null) return;
       sitesByNo.set(s.site_no, s);
       const m = L.circleMarker([s.dec_lat_va, s.dec_long_va], {
-        radius: 5, color: "#1e90ff", weight: 1, fillColor: "#1e90ff", fillOpacity: 0.75,
+        radius: 4, color: "#1e90ff", weight: 1, fillColor: "#1e90ff", fillOpacity: 0.75,
       });
       const name = escapeHtml(s.station_nm || "");
       m.bindTooltip(`<b>${s.site_no}</b><br>${name}`, { sticky: true });
       m.on("click", () => selectSite(s));
       markers.addLayer(m);
     });
-    map.addLayer(markers);
   });
 
 function escapeHtml(s) {
@@ -58,11 +60,35 @@ function escapeHtml(s) {
 }
 
 const panel = document.getElementById("panel");
+const analysisPanel = document.getElementById("analysis-panel");
 panel.querySelector(".close-btn").addEventListener("click", closePanel);
+document.getElementById("close-analysis").addEventListener("click", closeAnalysis);
+document.getElementById("expand-analysis").addEventListener("click", () => {
+  analysisPanel.classList.toggle("fullscreen");
+  // Nudge Plotly to resize
+  window.dispatchEvent(new Event("resize"));
+  const chart = document.getElementById("chart");
+  if (chart._fullLayout) Plotly.Plots.resize(chart);
+});
+
+let yAxisType = "linear";
+const yAxisBtn = document.getElementById("toggle-yaxis");
+yAxisBtn.addEventListener("click", () => {
+  yAxisType = yAxisType === "linear" ? "log" : "linear";
+  yAxisBtn.textContent = yAxisType === "linear" ? "log" : "linear";
+  const chart = document.getElementById("chart");
+  if (chart._fullLayout) Plotly.relayout(chart, { "yaxis.type": yAxisType });
+});
 
 function closePanel() {
   panel.classList.add("hidden");
   if (selectedLayer) { map.removeLayer(selectedLayer); selectedLayer = null; }
+}
+
+function closeAnalysis() {
+  analysisPanel.classList.add("hidden");
+  analysisPanel.classList.remove("fullscreen");
+  clearAnalysis();
 }
 
 function selectSite(site) {
@@ -91,31 +117,39 @@ function selectSite(site) {
   form.start.value = start.toISOString().slice(0, 10);
 
   panel.classList.remove("hidden");
-  clearAnalysis();
+  closeAnalysis();
+  runAnalysisSoon();
 }
 
 function clearAnalysis() {
-  document.getElementById("status").textContent = "";
+  setStatus("");
   document.getElementById("summary").innerHTML = "";
   document.getElementById("chart").innerHTML = "";
   document.getElementById("bfi-panel").innerHTML = "";
   document.getElementById("download-csv").classList.add("hidden");
+  document.getElementById("results").classList.add("hidden");
+  document.getElementById("analysis-title").textContent = "Analysis";
 }
 
 const form = document.getElementById("analyze-form");
-form.addEventListener("submit", e => {
-  e.preventDefault();
-  runAnalysis();
+form.addEventListener("submit", e => e.preventDefault());
+
+let runTimer = null;
+let runCounter = 0;
+function runAnalysisSoon(delay = 250) {
+  clearTimeout(runTimer);
+  runTimer = setTimeout(runAnalysis, delay);
+}
+form.addEventListener("change", () => runAnalysisSoon());
+form.addEventListener("input", e => {
+  // number inputs fire input on every keystroke; debounce those too
+  if (e.target.matches("input[type=number]")) runAnalysisSoon(500);
 });
 
 function runAnalysis() {
   const siteId = panel.dataset.siteId;
   if (!siteId) return;
   const methods = [...form.querySelectorAll("input[name=method]:checked")].map(x => x.value);
-  if (methods.length === 0) {
-    setStatus("Pick at least one method.", true);
-    return;
-  }
   const params = new URLSearchParams({
     site_id: siteId,
     start: form.start.value,
@@ -126,6 +160,7 @@ function runAnalysis() {
     bfi_max: form.bfi_max.value,
     area: form.area.value,
   });
+  const myRun = ++runCounter;
   setStatus("Running…");
   fetch(`/analyze?${params}`)
     .then(async r => {
@@ -133,24 +168,33 @@ function runAnalysis() {
       if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
       return body;
     })
-    .then(renderAnalysis)
-    .catch(err => setStatus(`Analysis failed: ${err.message}`, true));
+    .then(data => {
+      if (myRun !== runCounter) return;  // a newer run has superseded this one
+      renderAnalysis(data);
+    })
+    .catch(err => {
+      if (myRun !== runCounter) return;
+      setStatus(`Analysis failed: ${err.message}`, true);
+    });
 }
 
 function setStatus(msg, isError = false) {
   const el = document.getElementById("status");
   el.textContent = msg;
-  el.style.color = isError ? "#c62828" : "#555";
+  el.classList.toggle("error", isError);
 }
 
 function renderAnalysis(data) {
   setStatus("");
+  analysisPanel.classList.remove("hidden");
+  document.getElementById("results").classList.remove("hidden");
+
+  document.getElementById("analysis-title").textContent =
+    `${data.site_id} — ${data.station_nm}`;
 
   document.getElementById("summary").innerHTML = `
-    <div class="summary-grid">
-      <div><span class="label">Days</span><span class="value">${data.n_days.toLocaleString()}</span></div>
-      <div><span class="label">Mean Q</span><span class="value">${data.mean_q.toLocaleString(undefined, {maximumFractionDigits: 1})} ft³/s</span></div>
-    </div>
+    <div class="summary-row"><span class="label">Days</span><span class="value">${data.n_days.toLocaleString()}</span></div>
+    <div class="summary-row"><span class="label">Mean Q</span><span class="value">${data.mean_q.toLocaleString(undefined, {maximumFractionDigits: 1})} ft³/s</span></div>
   `;
 
   const traces = [{
@@ -168,24 +212,29 @@ function renderAnalysis(data) {
     });
   }
   Plotly.newPlot("chart", traces, {
-    yaxis: { type: "log", title: "Discharge (ft³/s, log)" },
-    xaxis: { title: "" },
+    yaxis: { type: yAxisType, title: "Discharge (ft³/s)", automargin: true },
+    xaxis: { title: "", automargin: true },
     margin: { l: 55, r: 10, t: 10, b: 40 },
-    legend: { orientation: "h", y: -0.22 },
-    height: 360,
+    legend: { orientation: "h", y: -0.18 },
+    autosize: true,
   }, { responsive: true, displaylogo: false });
 
   const bfiPanel = document.getElementById("bfi-panel");
-  let html = "<h3>Baseflow Index</h3><table><thead><tr><th>Method</th><th>BFI</th></tr></thead><tbody>";
-  for (const [key, bfi] of Object.entries(data.bfi)) {
-    const lbl = window.METHOD_LABELS[key] || key;
-    html += `<tr><td>${lbl}</td><td>${bfi != null ? bfi.toFixed(3) : "—"}</td></tr>`;
+  const bfiEntries = Object.entries(data.bfi);
+  if (bfiEntries.length) {
+    let html = "<h3>Baseflow Index</h3><table><thead><tr><th>Method</th><th>BFI</th></tr></thead><tbody>";
+    for (const [key, bfi] of bfiEntries) {
+      const lbl = window.METHOD_LABELS[key] || key;
+      html += `<tr><td>${lbl}</td><td>${bfi != null ? bfi.toFixed(3) : "—"}</td></tr>`;
+    }
+    html += "</tbody></table>";
+    if (Object.keys(data.failed || {}).length) {
+      html += `<div class="failed">Failed: ${Object.keys(data.failed).map(k => window.METHOD_LABELS[k] || k).join(", ")}</div>`;
+    }
+    bfiPanel.innerHTML = html;
+  } else {
+    bfiPanel.innerHTML = "";
   }
-  html += "</tbody></table>";
-  if (Object.keys(data.failed || {}).length) {
-    html += `<div class="failed">Failed: ${Object.keys(data.failed).map(k => window.METHOD_LABELS[k] || k).join(", ")}</div>`;
-  }
-  bfiPanel.innerHTML = html;
 
   const csvBtn = document.getElementById("download-csv");
   csvBtn.classList.remove("hidden");
