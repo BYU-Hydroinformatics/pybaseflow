@@ -1,6 +1,7 @@
-streamlit
+flask
+gunicorn
 baseflowx>=0.2.1
 dataretrieval
-plotly
-pydeck
+pandas
+numpy
 pyarrow
