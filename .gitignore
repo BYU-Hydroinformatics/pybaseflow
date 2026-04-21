@@ -141,7 +141,7 @@ dmypy.json
 
 # Lightning-Hydra-Template
 data/
-!pybaseflow/data/
+!baseflowx/data/
 logs/
 wandb/
 cache/

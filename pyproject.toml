@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pybaseflow"
+name = "baseflowx"
 dynamic = ["version"]
 description = "A comprehensive Python toolkit for baseflow separation"
 readme = "README.md"
@@ -35,10 +35,10 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["pybaseflow*"]
+include = ["baseflowx*"]
 
 [tool.setuptools.dynamic]
-version = {attr = "pybaseflow.__version__"}
+version = {attr = "baseflowx.__version__"}
 
 [tool.setuptools.package-data]
-pybaseflow = ["data/*.csv", "data/*.md"]
+baseflowx = ["data/*.csv", "data/*.md"]

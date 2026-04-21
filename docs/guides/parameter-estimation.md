@@ -1,26 +1,26 @@
 # Parameter Estimation Guide
 
-Most baseflow separation methods in pybaseflow require at least one parameter -- typically a recession coefficient -- and some require two. Choosing these parameters appropriately is essential: a poorly calibrated filter can produce baseflow estimates that are physically implausible, even if the filter itself is mathematically sound. This guide walks through the standard approaches for estimating each parameter, with code examples showing the recommended workflow.
+Most baseflow separation methods in baseflowx require at least one parameter -- typically a recession coefficient -- and some require two. Choosing these parameters appropriately is essential: a poorly calibrated filter can produce baseflow estimates that are physically implausible, even if the filter itself is mathematically sound. This guide walks through the standard approaches for estimating each parameter, with code examples showing the recommended workflow.
 
 ## Recession coefficient estimation
 
-The recession coefficient \(a\) (sometimes written \(k\) or \(K\)) characterizes the rate at which aquifer storage drains into the stream during periods of no recharge. It appears in nearly every recursive digital filter in pybaseflow -- Eckhardt, Chapman-Maxwell, Boughton, Willems, and others all require it. Physically, a high recession coefficient (close to 1.0) indicates a slowly draining aquifer with large storage, while a lower value indicates a flashier response. For daily streamflow data, typical values fall in the range 0.90 to 0.99.
+The recession coefficient \(a\) (sometimes written \(k\) or \(K\)) characterizes the rate at which aquifer storage drains into the stream during periods of no recharge. It appears in nearly every recursive digital filter in baseflowx -- Eckhardt, Chapman-Maxwell, Boughton, Willems, and others all require it. Physically, a high recession coefficient (close to 1.0) indicates a slowly draining aquifer with large storage, while a lower value indicates a flashier response. For daily streamflow data, typical values fall in the range 0.90 to 0.99.
 
-pybaseflow estimates the recession coefficient in two steps. First, `strict_baseflow()` identifies the timesteps that are unambiguously part of a baseflow recession, applying derivative-based heuristics to exclude rising limbs, storm peaks, and their immediate aftermath. Second, `recession_coefficient()` examines the ratio of the centered derivative to the discharge at those strict baseflow points, sorts those ratios, and selects the 5th percentile value. The 5th percentile is used rather than the median or mean because it targets the steepest uncontaminated recessions, which best represent the aquifer's intrinsic drainage rate without interference from residual quickflow.
+baseflowx estimates the recession coefficient in two steps. First, `strict_baseflow()` identifies the timesteps that are unambiguously part of a baseflow recession, applying derivative-based heuristics to exclude rising limbs, storm peaks, and their immediate aftermath. Second, `recession_coefficient()` examines the ratio of the centered derivative to the discharge at those strict baseflow points, sorts those ratios, and selects the 5th percentile value. The 5th percentile is used rather than the median or mean because it targets the steepest uncontaminated recessions, which best represent the aquifer's intrinsic drainage rate without interference from residual quickflow.
 
 The mathematical relationship is as follows. Given the centered finite difference \(dQ = (Q_{t+1} - Q_{t-1})/2\) and the concurrent discharge \(cQ = Q_t\), the function computes \(dQ/cQ\) for all strict baseflow points, selects the value at the 5th percentile of the sorted (descending) ratios, calculates \(K = -cQ/dQ\) at that index, and returns \(a = e^{-1/K}\).
 
 ```python
-import pybaseflow
+import baseflowx
 
-data = pybaseflow.load_sample_data()
+data = baseflowx.load_sample_data()
 Q = data['Q']
 
 # Step 1: identify strict baseflow periods
-strict = pybaseflow.strict_baseflow(Q)
+strict = baseflowx.strict_baseflow(Q)
 
 # Step 2: fit the recession coefficient
-a = pybaseflow.recession_coefficient(Q, strict)
+a = baseflowx.recession_coefficient(Q, strict)
 print(f"Recession coefficient: {a:.4f}")
 ```
 
@@ -49,16 +49,16 @@ Eckhardt (2005) proposed default \(\text{BFI}_\text{max}\) values based on hydro
 These values should be treated as order-of-magnitude guidance rather than precise calibration targets. Real catchments exhibit substantial variability even within the same hydrogeological class, and the "right" value for a particular site may differ from the tabulated default by 0.1 or more. Nevertheless, the Eckhardt defaults provide a defensible starting point for exploratory analyses.
 
 ```python
-import pybaseflow
+import baseflowx
 
-data = pybaseflow.load_sample_data()
+data = baseflowx.load_sample_data()
 Q = data['Q']
 
-strict = pybaseflow.strict_baseflow(Q)
-a = pybaseflow.recession_coefficient(Q, strict)
+strict = baseflowx.strict_baseflow(Q)
+a = baseflowx.recession_coefficient(Q, strict)
 
 # Use a literature value for a perennial stream with porous aquifer
-b = pybaseflow.eckhardt(Q, a, BFImax=0.80)
+b = baseflowx.eckhardt(Q, a, BFImax=0.80)
 ```
 
 ### Approach 2: annual maximum BFI
@@ -68,14 +68,14 @@ The `maxmium_BFI()` function estimates \(\text{BFI}_\text{max}\) from the stream
 The function first runs a backward-recursive baseflow separation using the Lyne-Hollick filter output and the recession coefficient, then computes annual BFI values. If the maximum annual BFI exceeds 0.9, the function falls back to the overall BFI (total baseflow divided by total discharge), as values near 1.0 typically reflect artifacts rather than genuine hydrogeology.
 
 ```python
-from pybaseflow.estimate import maxmium_BFI
+from baseflowx.estimate import maxmium_BFI
 
 # b_LH is the Lyne-Hollick baseflow, a is the recession coefficient
-b_LH = pybaseflow.lh(Q)
+b_LH = baseflowx.lh(Q)
 BFImax = maxmium_BFI(Q, b_LH, a)
 print(f"Estimated BFImax: {BFImax:.3f}")
 
-b = pybaseflow.eckhardt(Q, a, BFImax=BFImax)
+b = baseflowx.eckhardt(Q, a, BFImax=BFImax)
 ```
 
 If date information is available, pass it via the `date` argument to compute true calendar-year BFI values rather than dividing the record into 365-day blocks:
@@ -94,7 +94,7 @@ BFImax = maxmium_BFI(Q, b_LH, a, date=dates)
 When concurrent specific conductance data are available for even a portion of the discharge record, the Conductivity Mass Balance method provides a physically grounded calibration target. The `calibrate_eckhardt_from_cmb()` function runs CMB over the overlap period, computes the resulting BFI, and returns it as the \(\text{BFI}_\text{max}\) for use with the Eckhardt filter on the full record. This approach combines the physical rigor of the tracer method with the temporal coverage of the digital filter.
 
 ```python
-from pybaseflow.tracer import calibrate_eckhardt_from_cmb
+from baseflowx.tracer import calibrate_eckhardt_from_cmb
 
 # Q_sc and SC are arrays for the period with conductance data
 result = calibrate_eckhardt_from_cmb(Q_sc, SC)
@@ -103,7 +103,7 @@ BFImax = result['BFImax']
 a = result['a']
 
 # Now apply Eckhardt to the full record
-b = pybaseflow.eckhardt(Q_full, a, BFImax=BFImax)
+b = baseflowx.eckhardt(Q_full, a, BFImax=BFImax)
 ```
 
 See the [tracer methods page](../methods/tracer-methods.md) for a detailed discussion of CMB, end-member estimation, and the sensitivity of the calibration to \(SC_{BF}\) errors.
@@ -112,30 +112,30 @@ See the [tracer methods page](../methods/tracer-methods.md) for a detailed discu
 
 For the Lyne-Hollick filter family, the filter parameter \(\beta\) controls the degree of smoothing in the high-pass filter. Nathan & McMahon (1990) recommended \(\beta = 0.925\) for daily data, and this remains the standard default. Smaller values of \(\beta\) produce smoother baseflow with less high-frequency variability, while larger values preserve more of the hydrograph's structure in the quickflow component.
 
-The Boughton and IHACRES filters use a parameter \(C\) that governs the partitioning between slow and quick flow. pybaseflow provides the `param_calibrate()` function to optimize \(C\) against a Lyne-Hollick reference separation, balancing recession-period fit against overall hydrograph fit. The Willems filter uses a conceptually similar parameter \(w\) representing the average proportion of quickflow in the streamflow.
+The Boughton and IHACRES filters use a parameter \(C\) that governs the partitioning between slow and quick flow. baseflowx provides the `param_calibrate()` function to optimize \(C\) against a Lyne-Hollick reference separation, balancing recession-period fit against overall hydrograph fit. The Willems filter uses a conceptually similar parameter \(w\) representing the average proportion of quickflow in the streamflow.
 
 ## Recommended workflow
 
 For a typical analysis, the following sequence covers the essential steps from raw data to calibrated baseflow separation:
 
 ```python
-import pybaseflow
-from pybaseflow.io import fetch_usgs
+import baseflowx
+from baseflowx.io import fetch_usgs
 
 # 1. Obtain streamflow data
 data = fetch_usgs('01013500', '2015-01-01', '2020-12-31')
 Q = data['values']
 
 # 2. Estimate the recession coefficient
-strict = pybaseflow.strict_baseflow(Q)
-a = pybaseflow.recession_coefficient(Q, strict)
+strict = baseflowx.strict_baseflow(Q)
+a = baseflowx.recession_coefficient(Q, strict)
 
 # 3. Estimate BFImax (choose one approach)
-b_LH = pybaseflow.lh(Q)
-BFImax = pybaseflow.maxmium_BFI(Q, b_LH, a)
+b_LH = baseflowx.lh(Q)
+BFImax = baseflowx.maxmium_BFI(Q, b_LH, a)
 
 # 4. Run the Eckhardt filter
-b = pybaseflow.eckhardt(Q, a, BFImax=BFImax)
+b = baseflowx.eckhardt(Q, a, BFImax=BFImax)
 
 # 5. Compute BFI
 BFI = b.sum() / Q.sum()

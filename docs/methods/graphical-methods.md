@@ -1,6 +1,6 @@
 # Graphical and Recession-Based Methods
 
-The graphical and recession-based methods in pybaseflow take a fundamentally different approach from recursive digital filters. Rather than processing every timestep through a difference equation, these methods identify characteristic points in the hydrograph---local minima, turning points, or days where streamflow is entirely groundwater discharge---and construct the baseflow signal by interpolating between them. This family of methods has a long history in USGS practice and remains widely used for groundwater recharge estimation and low-flow analysis.
+The graphical and recession-based methods in baseflowx take a fundamentally different approach from recursive digital filters. Rather than processing every timestep through a difference equation, these methods identify characteristic points in the hydrograph---local minima, turning points, or days where streamflow is entirely groundwater discharge---and construct the baseflow signal by interpolating between them. This family of methods has a long history in USGS practice and remains widely used for groundwater recharge estimation and low-flow analysis.
 
 Five methods fall under this heading: the three HYSEP methods of Sloto and Crouse (1996), the UK Institute of Hydrology smoothed minima method (UKIH, 1980), and the PART recession-based method of Rutledge (1998). Each relies on the concept that baseflow varies slowly relative to surface runoff, so that the lower envelope of the hydrograph---or a carefully selected subset of it---approximates the groundwater discharge signal.
 
@@ -14,7 +14,7 @@ $$
 N = A^{0.2}
 $$
 
-where \(A\) is the drainage area in square miles. Because pybaseflow accepts area in km², the conversion \(A_{\text{mi}^2} = 0.3861 \, A_{\text{km}^2}\) is applied internally. The interval \(2N^*\) is defined as the odd integer between 3 and 11 nearest to \(2N\). This constraint ensures the window is always symmetric (odd) and bounded within a physically reasonable range. If no area is supplied, the default \(N = 5\) (i.e., \(2N^* = 9\)) is used.
+where \(A\) is the drainage area in square miles. Because baseflowx accepts area in km², the conversion \(A_{\text{mi}^2} = 0.3861 \, A_{\text{km}^2}\) is applied internally. The interval \(2N^*\) is defined as the odd integer between 3 and 11 nearest to \(2N\). This constraint ensures the window is always symmetric (odd) and bounded within a physically reasonable range. If no area is supplied, the default \(N = 5\) (i.e., \(2N^* = 9\)) is used.
 
 The rationale for the \(A^{0.2}\) relationship is that larger basins have longer routing times, so surface runoff persists for more days after a storm. Capping the interval at 11 days prevents excessive smoothing in very large basins where the power-law relationship begins to break down.
 
@@ -64,7 +64,7 @@ First, it identifies local minima by scanning the streamflow record with a windo
 
 Second, baseflow is constructed by linear interpolation between consecutive turning points. At each turning point, baseflow equals the observed streamflow. Between turning points, baseflow increases or decreases linearly. At any day where the interpolated value would exceed the observed streamflow, baseflow is capped at the streamflow value---enforcing the physical constraint that baseflow cannot exceed total flow.
 
-The edge regions of the record (before the first turning point and after the last) cannot be handled by interpolation because no bounding turning points exist. In these regions, pybaseflow substitutes the Lyne-Hollick digital filter baseflow, passed in as the `b_LH` parameter. This hybrid approach avoids undefined values at the boundaries while preserving the graphical character of the method across the interior of the record.
+The edge regions of the record (before the first turning point and after the last) cannot be handled by interpolation because no bounding turning points exist. In these regions, baseflowx substitutes the Lyne-Hollick digital filter baseflow, passed in as the `b_LH` parameter. This hybrid approach avoids undefined values at the boundaries while preserving the graphical character of the method across the interior of the record.
 
 ![Local minimum baseflow separation. Turning points (local minima within the HYSEP window) are connected by linear interpolation, with edge regions filled by the Lyne-Hollick filter.](../assets/figures/local_minimum.png)
 
@@ -138,7 +138,7 @@ The PART procedure involves the following steps:
 
 The log-space interpolation is not an arbitrary choice. Groundwater discharge from a linear reservoir decays exponentially, so \(\log_{10}(Q_b)\) decreases linearly with time during pure recession. By interpolating in log-space, PART implicitly assumes that baseflow between anchor points follows the same exponential decay law. This makes the method internally consistent with linear reservoir theory, even though it does not explicitly fit a recession constant.
 
-The 0.1 log-cycle threshold deserves particular attention. Rutledge (1998) adopted this value from the recession analysis framework of Barnes (1939), who used it to distinguish the "baseflow recession" segment of a master recession curve from faster components. In practice, the threshold is conservative: most groundwater recessions decline at well under 0.1 log cycles per day. The `log_cycle_threshold` parameter is exposed in the pybaseflow API for users who wish to adjust it, though the default of 0.1 is appropriate for most applications.
+The 0.1 log-cycle threshold deserves particular attention. Rutledge (1998) adopted this value from the recession analysis framework of Barnes (1939), who used it to distinguish the "baseflow recession" segment of a master recession curve from faster components. In practice, the threshold is conservative: most groundwater recessions decline at well under 0.1 log cycles per day. The `log_cycle_threshold` parameter is exposed in the baseflowx API for users who wish to adjust it, though the default of 0.1 is appropriate for most applications.
 
 ![PART baseflow separation. Qualifying days (where streamflow has been in recession for N days) serve as anchor points; baseflow is interpolated between them in log-space, producing smooth exponential-decay curves.](../assets/figures/part.png)
 

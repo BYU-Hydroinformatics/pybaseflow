@@ -1,10 +1,10 @@
 # Working with USGS Streamflow Data
 
-pybaseflow integrates directly with the USGS National Water Information System (NWIS) through the `fetch_usgs()` function in the `pybaseflow.io` module, allowing you to retrieve daily streamflow and water-quality data without leaving your Python environment. This guide covers the NWIS API interface, parameter codes, data handling, and a complete worked example.
+baseflowx integrates directly with the USGS National Water Information System (NWIS) through the `fetch_usgs()` function in the `baseflowx.io` module, allowing you to retrieve daily streamflow and water-quality data without leaving your Python environment. This guide covers the NWIS API interface, parameter codes, data handling, and a complete worked example.
 
 ## The NWIS daily values service
 
-The USGS operates the National Water Information System, which archives hydrological data from thousands of stream gauges across the United States. The NWIS daily values (DV) web service provides programmatic access to these records via a REST API that returns JSON-formatted time series. pybaseflow wraps this API in the `fetch_usgs()` function, handling URL construction, HTTP requests, JSON parsing, and missing-value encoding so that you receive clean NumPy arrays ready for analysis.
+The USGS operates the National Water Information System, which archives hydrological data from thousands of stream gauges across the United States. The NWIS daily values (DV) web service provides programmatic access to these records via a REST API that returns JSON-formatted time series. baseflowx wraps this API in the `fetch_usgs()` function, handling URL construction, HTTP requests, JSON parsing, and missing-value encoding so that you receive clean NumPy arrays ready for analysis.
 
 Each parameter in NWIS is identified by a five-digit numeric code. The two codes most relevant to baseflow separation are:
 
@@ -20,7 +20,7 @@ You do not need to memorize these codes. The `fetch_usgs()` function accepts hum
 The function signature requires a USGS site number, a start date, and an end date. Site numbers are strings (they often have leading zeros) and dates are formatted as `'YYYY-MM-DD'`.
 
 ```python
-from pybaseflow.io import fetch_usgs
+from baseflowx.io import fetch_usgs
 
 # Fetch daily discharge for Fish River near Fort Kent, Maine
 data = fetch_usgs('01013500', '2019-01-01', '2020-12-31', parameter='discharge')
@@ -56,7 +56,7 @@ Not all USGS sites have continuous SC records. If no data are available for the 
 
 ## Handling missing data
 
-Real-world streamflow records frequently contain gaps due to equipment malfunction, ice-affected periods, or other causes. pybaseflow's separation functions generally handle NaN values gracefully -- they propagate through arithmetic operations without corrupting adjacent values -- but extended gaps can affect filter initialization and the quality of the separated baseflow in the vicinity of the gap.
+Real-world streamflow records frequently contain gaps due to equipment malfunction, ice-affected periods, or other causes. baseflowx's separation functions generally handle NaN values gracefully -- they propagate through arithmetic operations without corrupting adjacent values -- but extended gaps can affect filter initialization and the quality of the separated baseflow in the vicinity of the gap.
 
 For short gaps (a few days), the simplest approach is often to interpolate before running the separation:
 
@@ -74,12 +74,12 @@ For longer gaps, it may be preferable to split the record into continuous segmen
 
 ## Bundled sample data
 
-For quick experimentation and reproducible examples, pybaseflow ships with a bundled dataset from USGS site 01013500 (Fish River near Fort Kent, Maine) covering 2019--2020. This dataset is accessible without an internet connection via `load_sample_data()`:
+For quick experimentation and reproducible examples, baseflowx ships with a bundled dataset from USGS site 01013500 (Fish River near Fort Kent, Maine) covering 2019--2020. This dataset is accessible without an internet connection via `load_sample_data()`:
 
 ```python
-import pybaseflow
+import baseflowx
 
-data = pybaseflow.load_sample_data()
+data = baseflowx.load_sample_data()
 
 # Returns a dict with:
 #   'dates'   - numpy array of datetime.date objects
@@ -96,8 +96,8 @@ The following example demonstrates the end-to-end workflow: fetching data from N
 
 ```python
 import numpy as np
-import pybaseflow
-from pybaseflow.io import fetch_usgs
+import baseflowx
+from baseflowx.io import fetch_usgs
 
 # Fetch 5 years of daily discharge
 data = fetch_usgs('01013500', '2015-01-01', '2020-12-31')
@@ -111,22 +111,22 @@ if nans.any():
     Q[nans] = np.interp(x[nans], x[~nans], Q[~nans])
 
 # Estimate the recession coefficient
-strict = pybaseflow.strict_baseflow(Q)
-a = pybaseflow.recession_coefficient(Q, strict)
+strict = baseflowx.strict_baseflow(Q)
+a = baseflowx.recession_coefficient(Q, strict)
 
 # Run the Eckhardt filter with a literature BFImax
-b_eck = pybaseflow.eckhardt(Q, a, BFImax=0.80)
+b_eck = baseflowx.eckhardt(Q, a, BFImax=0.80)
 BFI = np.nansum(b_eck) / np.nansum(Q)
 print(f"Recession coefficient: {a:.4f}")
 print(f"BFI (Eckhardt, BFImax=0.80): {BFI:.3f}")
 
 # Compare with the Lyne-Hollick 3-pass filter
-b_lh = pybaseflow.lh_multi(Q, beta=0.925, num_pass=3)
+b_lh = baseflowx.lh_multi(Q, beta=0.925, num_pass=3)
 BFI_lh = np.nansum(b_lh) / np.nansum(Q)
 print(f"BFI (Lyne-Hollick 3-pass): {BFI_lh:.3f}")
 
 # Run BFlow for recession analysis
-from pybaseflow.estimate import bflow
+from baseflowx.estimate import bflow
 result = bflow(Q)
 print(f"Alpha factor (SWAT ALPHA_BF): {result['alpha_factor']:.5f}")
 print(f"Baseflow days: {result['baseflow_days']:.1f}")
@@ -135,7 +135,7 @@ print(f"Baseflow days: {result['baseflow_days']:.1f}")
 If specific conductance data are also available, you can extend this workflow with CMB calibration:
 
 ```python
-from pybaseflow.tracer import calibrate_eckhardt_from_cmb
+from baseflowx.tracer import calibrate_eckhardt_from_cmb
 
 # Fetch concurrent SC data (may cover a shorter period)
 sc_data = fetch_usgs('01013500', '2019-01-01', '2020-12-31', parameter='sc')
@@ -151,7 +151,7 @@ print(f"CMB-calibrated BFImax: {cal['BFImax']:.3f}")
 print(f"SC_BF = {cal['SC_BF']:.1f}, SC_RO = {cal['SC_RO']:.1f}")
 
 # Apply calibrated Eckhardt to the full record
-b_cal = pybaseflow.eckhardt(Q, cal['a'], BFImax=cal['BFImax'])
+b_cal = baseflowx.eckhardt(Q, cal['a'], BFImax=cal['BFImax'])
 ```
 
 ## Error handling

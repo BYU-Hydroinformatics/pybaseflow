@@ -3,18 +3,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import pybaseflow
-from pybaseflow.separation import (
+import baseflowx
+from baseflowx.separation import (
     lh, lh_multi, chapman, chapman_maxwell, boughton, eckhardt,
     ewma, furey, willems, ihacres, what,
     fixed, slide, local, ukih, part,
     strict_baseflow, _recursive_digital_filter,
 )
-from pybaseflow.estimate import recession_coefficient, bflow, bflow_recession_analysis
-from pybaseflow.tracer import cmb
+from baseflowx.estimate import recession_coefficient, bflow, bflow_recession_analysis
+from baseflowx.tracer import cmb
 
 FIGDIR = "docs/assets/figures"
-data = pybaseflow.load_sample_data()
+data = baseflowx.load_sample_data()
 Q = data['Q']
 dates = data['dates']
 
@@ -287,7 +287,7 @@ save(fig, 'recession_coefficient')
 # =========================================================================
 print("Generating bn77 figure...")
 
-from pybaseflow.separation import bn77
+from baseflowx.separation import bn77
 
 drought_idx = bn77(Q, L_min=5, snow_freeze_period=(400, 450),
                    observational_precision=0.1, quantile=0.9)

@@ -1,10 +1,10 @@
 # Method Overview
 
-pybaseflow implements 17 baseflow separation methods spanning four distinct paradigms. Before diving into the details of any individual method, it is worth understanding how these approaches relate to one another and what structural assumptions distinguish them. This page provides that orientation.
+baseflowx implements 17 baseflow separation methods spanning four distinct paradigms. Before diving into the details of any individual method, it is worth understanding how these approaches relate to one another and what structural assumptions distinguish them. This page provides that orientation.
 
 ## The generalized recursive digital filter
 
-The majority of methods in pybaseflow belong to the recursive digital filter family. Despite their apparent diversity -- different authors, different derivations, different parameter names -- all of these filters can be written as special cases of a single generalized equation:
+The majority of methods in baseflowx belong to the recursive digital filter family. Despite their apparent diversity -- different authors, different derivations, different parameter names -- all of these filters can be written as special cases of a single generalized equation:
 
 $$b_t = \alpha \, b_{t-1} + \beta \left( Q_t + \gamma \, Q_{t-1} \right)$$
 
@@ -20,7 +20,7 @@ When \(\gamma = 1\), the filter incorporates both the current and previous strea
 
 The IHACRES filter generalizes further by allowing \(\gamma\) to take any value, bridging the two families along a continuum. When its \(\alpha_s\) parameter is set to zero it reduces exactly to the Boughton filter; as \(\alpha_s\) moves toward 1.0 it approaches the signal-processing family.
 
-![Taxonomy of the recursive digital filter families in pybaseflow, showing the gamma=0 and gamma=1 branches and their member methods.](../assets/figures/filter_families.png)
+![Taxonomy of the recursive digital filter families in baseflowx, showing the gamma=0 and gamma=1 branches and their member methods.](../assets/figures/filter_families.png)
 
 ## Graphical and recession-based methods
 
@@ -40,4 +40,4 @@ No single method is universally "best." The recursive digital filters are the si
 
 In practice, running several methods and comparing their BFI estimates is a useful diagnostic. If multiple independent approaches converge on a similar baseflow fraction, confidence in the result is strengthened. If they diverge, the discrepancy itself is informative -- it may point to parameter miscalibration, violation of a method's assumptions, or genuine hydrological complexity that a single-method analysis would miss.
 
-![Comparison of all 17 baseflow separation methods in pybaseflow applied to the Fish River sample dataset.](../assets/figures/overview_comparison.png)
+![Comparison of all 17 baseflow separation methods in baseflowx applied to the Fish River sample dataset.](../assets/figures/overview_comparison.png)

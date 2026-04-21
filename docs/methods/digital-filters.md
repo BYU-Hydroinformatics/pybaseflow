@@ -6,7 +6,7 @@ Eckhardt (2005) demonstrated that nearly all published recursive digital filters
 
 $$b_t = \alpha \cdot b_{t-1} + \beta \left( Q_t + \gamma \cdot Q_{t-1} \right)$$
 
-subject to the physical constraint \(b_t \leq Q_t\), which ensures that baseflow never exceeds total streamflow. The three coefficients \(\alpha\), \(\beta\), and \(\gamma\) are derived from the specific assumptions of each filter, and the value of \(\gamma\) divides the filters into two structural families. In pybaseflow, all of these filters are implemented through a shared computational core (`_recursive_digital_filter`), making the family relationships explicit in the code itself.
+subject to the physical constraint \(b_t \leq Q_t\), which ensures that baseflow never exceeds total streamflow. The three coefficients \(\alpha\), \(\beta\), and \(\gamma\) are derived from the specific assumptions of each filter, and the value of \(\gamma\) divides the filters into two structural families. In baseflowx, all of these filters are implemented through a shared computational core (`_recursive_digital_filter`), making the family relationships explicit in the code itself.
 
 ![Comparison of the two filter families applied to a peak event. The gamma=0 family (left) derives from linear reservoir theory; the gamma=1 family (right) originates in signal processing.](../assets/figures/filter_families.png)
 
@@ -31,15 +31,15 @@ $$b_t = \frac{a}{2 - a} \, b_{t-1} + \frac{1 - a}{2 - a} \, Q_t$$
 Chapman and Maxwell showed that this formulation is equivalent to a trapezoidal-rule discretization of the linear reservoir, making it exact for exponentially declining recessions. As discussed below, this filter is mathematically identical to the Eckhardt filter with \(\text{BFI}_\text{max} = 0.5\), which means it implicitly assumes that baseflow constitutes at most half of total streamflow -- an assumption that is reasonable for flashy catchments but too restrictive for many groundwater-dominated systems.
 
 ```python
-import pybaseflow
+import baseflowx
 
-data = pybaseflow.load_sample_data()
+data = baseflowx.load_sample_data()
 Q = data['Q']
 
-strict = pybaseflow.strict_baseflow(Q)
-a = pybaseflow.recession_coefficient(Q, strict)
+strict = baseflowx.strict_baseflow(Q)
+a = baseflowx.recession_coefficient(Q, strict)
 
-b = pybaseflow.chapman_maxwell(Q, a)
+b = baseflowx.chapman_maxwell(Q, a)
 ```
 
 ![Chapman-Maxwell baseflow separation applied to the Fish River sample dataset.](../assets/figures/chapman_maxwell.png)
@@ -59,7 +59,7 @@ $$b_t = \frac{a}{1 + C} \, b_{t-1} + \frac{C}{1 + C} \, Q_t$$
 The parameter \(C\) governs the responsiveness of the baseflow signal to changes in streamflow. Small values of \(C\) produce a heavily smoothed baseflow that responds sluggishly to recharge events; large values allow baseflow to track streamflow more closely. This filter is a reparameterization of the Eckhardt filter, with the relationship \(C = (1 - a) \cdot \text{BFI}_\text{max} / (1 - \text{BFI}_\text{max})\). In practice, \(C\) is typically calibrated against independent estimates of the baseflow index, such as those derived from tracer data.
 
 ```python
-b = pybaseflow.boughton(Q, a, C=0.05)
+b = baseflowx.boughton(Q, a, C=0.05)
 ```
 
 ![Boughton baseflow separation applied to the Fish River sample dataset.](../assets/figures/boughton.png)
@@ -81,7 +81,7 @@ The \(\text{BFI}_\text{max}\) parameter encodes prior knowledge about the hydrog
 The Eckhardt filter subsumes the Chapman-Maxwell filter as the special case \(\text{BFI}_\text{max} = 0.5\), and it is algebraically equivalent to the Boughton filter under the substitution \(C = (1 - a) \cdot \text{BFI}_\text{max} / (1 - \text{BFI}_\text{max})\). These relationships are not mere curiosities; they mean that any result obtained with Chapman-Maxwell or Boughton can be reproduced exactly with the appropriate Eckhardt parameterization.
 
 ```python
-b = pybaseflow.eckhardt(Q, a, BFImax=0.8)
+b = baseflowx.eckhardt(Q, a, BFImax=0.8)
 ```
 
 ![Eckhardt baseflow separation applied to the Fish River sample dataset.](../assets/figures/eckhardt.png)
@@ -101,7 +101,7 @@ $$b_t = (1 - e) \cdot b_{t-1} + e \cdot Q_t$$
 The EWMA filter is conceptually straightforward: each baseflow estimate is a weighted average of the previous baseflow and the current streamflow, with \(e\) controlling how rapidly new information is incorporated. Small values of \(e\) (e.g., 0.001--0.01) produce a very smooth, slowly varying baseflow signal, while larger values allow more rapid response. Unlike most other filters in this family, the EWMA does not have an explicit physical derivation from the linear reservoir model, but its mathematical form is consistent with the general framework. The parameter \(e\) is related to the recession constant, though the mapping is not as direct as for Eckhardt or Chapman-Maxwell.
 
 ```python
-b = pybaseflow.ewma(Q, e=0.01)
+b = baseflowx.ewma(Q, e=0.01)
 ```
 
 ![EWMA baseflow separation applied to the Fish River sample dataset.](../assets/figures/ewma.png)
@@ -114,10 +114,10 @@ The Furey-Gupta filter stands apart from the other \(\gamma = 0\) filters becaus
 
 $$b_t = \left(a - A(1-a)\right) \cdot b_{t-1} + A(1-a) \cdot Q_{t-1}$$
 
-The parameter \(A\) represents the fraction of aquifer discharge that reaches the stream within one timestep. This lagged dependence on \(Q_{t-1}\) reflects the physical reality that groundwater recharge from a storm event does not instantaneously appear as baseflow; there is a finite travel time through the subsurface. Because of this lagged structure, the Furey-Gupta filter does not fit exactly into the standard general form and is implemented with its own recursion loop in pybaseflow.
+The parameter \(A\) represents the fraction of aquifer discharge that reaches the stream within one timestep. This lagged dependence on \(Q_{t-1}\) reflects the physical reality that groundwater recharge from a storm event does not instantaneously appear as baseflow; there is a finite travel time through the subsurface. Because of this lagged structure, the Furey-Gupta filter does not fit exactly into the standard general form and is implemented with its own recursion loop in baseflowx.
 
 ```python
-b = pybaseflow.furey(Q, a, A=0.5)
+b = baseflowx.furey(Q, a, A=0.5)
 ```
 
 ![Furey-Gupta baseflow separation applied to the Fish River sample dataset.](../assets/figures/furey.png)
@@ -126,12 +126,12 @@ b = pybaseflow.furey(Q, a, A=0.5)
 
 ### WHAT (Lim et al., 2005)
 
-The Web-based Hydrograph Analysis Tool (WHAT) method, introduced by Lim et al. (2005), is mathematically identical to the Eckhardt filter. It was developed as part of an automated web-based system for hydrograph analysis and uses the same two parameters (\(a\) and \(\text{BFI}_\text{max}\)). In pybaseflow, `what()` is provided as a convenience alias for `eckhardt()` to maintain compatibility with the WHAT naming convention used in some literature. Note that the argument order differs: `what(Q, BFImax, a)` versus `eckhardt(Q, a, BFImax)`.
+The Web-based Hydrograph Analysis Tool (WHAT) method, introduced by Lim et al. (2005), is mathematically identical to the Eckhardt filter. It was developed as part of an automated web-based system for hydrograph analysis and uses the same two parameters (\(a\) and \(\text{BFI}_\text{max}\)). In baseflowx, `what()` is provided as a convenience alias for `eckhardt()` to maintain compatibility with the WHAT naming convention used in some literature. Note that the argument order differs: `what(Q, BFImax, a)` versus `eckhardt(Q, a, BFImax)`.
 
 ```python
 # These two calls produce identical results
-b1 = pybaseflow.eckhardt(Q, a, BFImax=0.8)
-b2 = pybaseflow.what(Q, BFImax=0.8, a=a)
+b1 = baseflowx.eckhardt(Q, a, BFImax=0.8)
+b2 = baseflowx.what(Q, BFImax=0.8, a=a)
 ```
 
 **Reference:** Lim, K.J., Engel, B.A., Tang, Z., Choi, J., Kim, K., Muthukrishnan, S., and Tripathy, D. (2005). Automated web GIS based hydrograph analysis tool, WHAT. *Journal of the American Water Resources Association*, 41(6), 1407--1416.
@@ -148,21 +148,21 @@ The Lyne-Hollick filter is the oldest and most widely used recursive digital fil
 
 $$\alpha = \beta_p, \qquad \beta = \frac{1 - \beta_p}{2}$$
 
-where \(\beta_p\) is the filter parameter (confusingly named "beta" in the original literature; pybaseflow uses the variable name `beta` to match convention). The recursion is:
+where \(\beta_p\) is the filter parameter (confusingly named "beta" in the original literature; baseflowx uses the variable name `beta` to match convention). The recursion is:
 
 $$b_t = \beta_p \cdot b_{t-1} + \frac{1 - \beta_p}{2} \left( Q_t + Q_{t-1} \right)$$
 
 Nathan and McMahon (1990) recommended a default value of \(\beta_p = 0.925\) based on comparison with manual baseflow separation and tracer experiments. They also established the practice of applying the filter in multiple passes -- alternating forward and backward through the record -- to achieve greater smoothing. A single forward pass tends to overestimate baseflow on the rising limb and underestimate it on the falling limb; the backward pass compensates for this asymmetry.
 
-In pybaseflow, `lh()` applies the standard two-pass (forward + backward) implementation, while `lh_multi()` allows a configurable number of passes. The three-pass protocol (\(n = 3\)) has become a *de facto* standard in Australian hydrology and is used internally by the BFlow method.
+In baseflowx, `lh()` applies the standard two-pass (forward + backward) implementation, while `lh_multi()` allows a configurable number of passes. The three-pass protocol (\(n = 3\)) has become a *de facto* standard in Australian hydrology and is used internally by the BFlow method.
 
 ```python
 # Standard 2-pass Lyne-Hollick
-b_2pass = pybaseflow.lh(Q, beta=0.925)
+b_2pass = baseflowx.lh(Q, beta=0.925)
 
 # Configurable n-pass variant
-b_1pass = pybaseflow.lh_multi(Q, beta=0.925, num_pass=1)
-b_3pass = pybaseflow.lh_multi(Q, beta=0.925, num_pass=3)
+b_1pass = baseflowx.lh_multi(Q, beta=0.925, num_pass=1)
+b_3pass = baseflowx.lh_multi(Q, beta=0.925, num_pass=3)
 ```
 
 ![Effect of the number of passes on the Lyne-Hollick filter. Additional passes progressively smooth the baseflow estimate, reducing the baseflow index.](../assets/figures/lyne_hollick_passes.png)
@@ -188,7 +188,7 @@ $$b_t = \frac{3a - 1}{3 - a} \, b_{t-1} + \frac{1 - a}{3 - a} \left( Q_t + Q_{t-
 This filter occupies an interesting position in the taxonomy: it uses the recession coefficient \(a\) (a physical parameter from the linear reservoir model) but applies it within a \(\gamma = 1\) structure (a signal processing form). Chapman demonstrated that this formulation provides a better approximation to the analytical solution of the linear reservoir differential equation than the simpler Chapman-Maxwell form when the recession is not purely exponential. The filter requires \(a > 1/3\) for \(\alpha\) to remain positive, a condition that is easily satisfied for typical recession coefficients (which range from 0.9 to 0.999 for daily streamflow).
 
 ```python
-b = pybaseflow.chapman(Q, a)
+b = baseflowx.chapman(Q, a)
 ```
 
 ![Chapman (1991) baseflow separation applied to the Fish River sample dataset.](../assets/figures/chapman.png)
@@ -212,7 +212,7 @@ $$b_t = \frac{a - v}{1 + v} \, b_{t-1} + \frac{v}{1 + v} \left( Q_t + Q_{t-1} \r
 The parameter \(w\) has an intuitive physical interpretation as the fraction of total streamflow that arrives as quickflow (i.e., \(w = 1 - \text{BFI}\) in steady state). This makes the filter particularly convenient when prior estimates of the baseflow index are available from regional regression or tracer studies. Willems developed the filter as part of a broader time series analysis toolkit for evaluating rainfall-runoff model performance.
 
 ```python
-b = pybaseflow.willems(Q, a, w=0.5)
+b = baseflowx.willems(Q, a, w=0.5)
 ```
 
 ![Willems baseflow separation applied to the Fish River sample dataset.](../assets/figures/willems.png)
@@ -238,7 +238,7 @@ The \(\alpha_s\) parameter governs the degree to which baseflow responds to the 
 The \(\alpha_s\) parameter has a physical interpretation within the IHACRES model: it characterizes the slow-flow component of the unit hydrograph, controlling how quickly the catchment's baseflow response decays after a recharge event. Negative values reflect the typical situation where the contribution of previous-day streamflow to current baseflow is attenuated (i.e., the slow-flow recession is monotonically decreasing).
 
 ```python
-b = pybaseflow.ihacres(Q, a, C=0.3, alpha_s=-0.5)
+b = baseflowx.ihacres(Q, a, C=0.3, alpha_s=-0.5)
 ```
 
 ![Sensitivity of the IHACRES filter to the alpha_s parameter. When alpha_s=0, the filter reduces to the Boughton filter. More negative values of alpha_s increase the influence of the previous timestep's streamflow.](../assets/figures/ihacres_sensitivity.png)

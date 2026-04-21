@@ -1,33 +1,33 @@
-# pybaseflow
+# baseflowx
 
 A comprehensive Python toolkit for baseflow separation from streamflow hydrographs.
 
-pybaseflow implements 17 baseflow separation methods spanning four paradigms: recursive digital filters, graphical/interval methods, recession-based methods, and tracer-based methods. It also provides parameter estimation, USGS data retrieval, and a CMB-to-Eckhardt calibration bridge.
+baseflowx implements 17 baseflow separation methods spanning four paradigms: recursive digital filters, graphical/interval methods, recession-based methods, and tracer-based methods. It also provides parameter estimation, USGS data retrieval, and a CMB-to-Eckhardt calibration bridge.
 
-This project builds on the [baseflow](https://github.com/xiejx5/baseflow) package by Xie et al. (2020), which implemented methods described in "Evaluation of typical methods for baseflow separation in the contiguous United States" (Journal of Hydrology, 583, 124628). pybaseflow extends that work with new methods (PART, CMB, BFlow, IHACRES), a unified filter architecture, modern packaging, and USGS data integration.
+This project builds on the [baseflow](https://github.com/xiejx5/baseflow) package by Xie et al. (2020), which implemented methods described in "Evaluation of typical methods for baseflow separation in the contiguous United States" (Journal of Hydrology, 583, 124628). baseflowx extends that work with new methods (PART, CMB, BFlow, IHACRES), a unified filter architecture, modern packaging, and USGS data integration.
 
 This project is funded by [CIROH](https://ciroh.ua.edu/).
 
 ## Install
 
 ```bash
-pip install pybaseflow
+pip install baseflowx
 ```
 
 ## Quick Start
 
 ```python
-import pybaseflow
+import baseflowx
 
 # Load bundled sample data (USGS 01013500, Fish River, Maine)
-data = pybaseflow.load_sample_data()
+data = baseflowx.load_sample_data()
 Q = data['Q']
 
 # Run a single method
-b = pybaseflow.eckhardt(Q, a=0.98, BFImax=0.8)
+b = baseflowx.eckhardt(Q, a=0.98, BFImax=0.8)
 
 # Or fetch your own data from USGS NWIS
-from pybaseflow.io import fetch_usgs
+from baseflowx.io import fetch_usgs
 data = fetch_usgs('01013500', '2019-01-01', '2020-12-31')
 ```
 
@@ -89,19 +89,19 @@ All recursive digital filters share a generalized core:
 ## Parameter Estimation
 
 ```python
-import pybaseflow
+import baseflowx
 
-data = pybaseflow.load_sample_data()
+data = baseflowx.load_sample_data()
 Q = data['Q']
 
 # Estimate recession coefficient from the hydrograph
-strict = pybaseflow.strict_baseflow(Q)
-a = pybaseflow.recession_coefficient(Q, strict)
+strict = baseflowx.strict_baseflow(Q)
+a = baseflowx.recession_coefficient(Q, strict)
 
 # Use the estimated recession coefficient with any filter
-b = pybaseflow.eckhardt(Q, a, BFImax=0.8)
-b = pybaseflow.chapman_maxwell(Q, a)
-b = pybaseflow.willems(Q, a, w=0.5)
+b = baseflowx.eckhardt(Q, a, BFImax=0.8)
+b = baseflowx.chapman_maxwell(Q, a)
+b = baseflowx.willems(Q, a, w=0.5)
 ```
 
 ## CMB Calibration Bridge
@@ -109,16 +109,16 @@ b = pybaseflow.willems(Q, a, w=0.5)
 Use specific conductance data to calibrate Eckhardt's BFImax:
 
 ```python
-from pybaseflow.tracer import calibrate_eckhardt_from_cmb
+from baseflowx.tracer import calibrate_eckhardt_from_cmb
 
 cal = calibrate_eckhardt_from_cmb(Q, SC)
-b = pybaseflow.eckhardt(Q, cal['a'], cal['BFImax'])
+b = baseflowx.eckhardt(Q, cal['a'], cal['BFImax'])
 ```
 
 ## BFlow / SWAT Integration
 
 ```python
-result = pybaseflow.bflow(Q)
+result = baseflowx.bflow(Q)
 print(f"ALPHA_BF = {result['alpha_factor']:.4f}")  # for SWAT calibration
 print(f"BFI = {result['BFI']:.3f}")
 print(f"Baseflow days = {result['baseflow_days']:.1f}")
@@ -127,7 +127,7 @@ print(f"Baseflow days = {result['baseflow_days']:.1f}")
 ## USGS Data Retrieval
 
 ```python
-from pybaseflow.io import fetch_usgs
+from baseflowx.io import fetch_usgs
 
 # Fetch daily discharge
 data = fetch_usgs('01013500', '2015-01-01', '2020-12-31')

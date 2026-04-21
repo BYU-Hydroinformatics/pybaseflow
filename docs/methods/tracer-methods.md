@@ -20,12 +20,12 @@ This is the core CMB equation. It produces a baseflow estimate at every timestep
 
 ## End-member estimation
 
-The practical challenge lies in choosing appropriate values for the two end-member conductivities. In the absence of direct well sampling or event-based monitoring, pybaseflow estimates them from the statistical distribution of the SC record itself. The rationale is that the highest conductance values in the record correspond to periods when streamflow is almost entirely groundwater, while the lowest values correspond to storm peaks dominated by fresh precipitation.
+The practical challenge lies in choosing appropriate values for the two end-member conductivities. In the absence of direct well sampling or event-based monitoring, baseflowx estimates them from the statistical distribution of the SC record itself. The rationale is that the highest conductance values in the record correspond to periods when streamflow is almost entirely groundwater, while the lowest values correspond to storm peaks dominated by fresh precipitation.
 
 The `estimate_endmembers()` function computes \(SC_{BF}\) as the 99th percentile of the observed SC series and \(SC_{RO}\) as the 1st percentile:
 
 ```python
-from pybaseflow.tracer import estimate_endmembers
+from baseflowx.tracer import estimate_endmembers
 
 SC_BF, SC_RO = estimate_endmembers(SC, bf_percentile=99, ro_percentile=1)
 ```
@@ -40,7 +40,7 @@ The `cmb()` function accepts streamflow and specific conductance arrays and retu
 
 ```python
 import numpy as np
-from pybaseflow.tracer import cmb
+from baseflowx.tracer import cmb
 
 # Q and SC are numpy arrays of the same length
 b = cmb(Q, SC)
@@ -69,7 +69,7 @@ Seasonal variation in end-members is another potential complication. In regions 
 One of the most valuable applications of CMB is not as a standalone separation method but as a calibration target for the Eckhardt filter. Many streamflow records have continuous discharge data spanning decades but only a limited window of concurrent SC measurements. The `calibrate_eckhardt_from_cmb()` function bridges this gap: it runs CMB over the period where both Q and SC are available, computes the resulting BFI, and returns a \(\text{BFI}_\text{max}\) value that can then be used with the Eckhardt filter on the full discharge record.
 
 ```python
-from pybaseflow.tracer import calibrate_eckhardt_from_cmb
+from baseflowx.tracer import calibrate_eckhardt_from_cmb
 
 result = calibrate_eckhardt_from_cmb(Q, SC)
 

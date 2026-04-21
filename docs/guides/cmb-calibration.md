@@ -1,6 +1,6 @@
 # CMB Calibration Bridge
 
-One of the most common challenges in baseflow separation is choosing appropriate parameters for recursive digital filters. The Eckhardt filter, for instance, requires a maximum baseflow index (BFImax) that is difficult to determine from streamflow data alone. The Conductivity Mass Balance (CMB) method offers a physically grounded alternative when specific conductance data is available, and pybaseflow provides a direct calibration bridge between the two approaches.
+One of the most common challenges in baseflow separation is choosing appropriate parameters for recursive digital filters. The Eckhardt filter, for instance, requires a maximum baseflow index (BFImax) that is difficult to determine from streamflow data alone. The Conductivity Mass Balance (CMB) method offers a physically grounded alternative when specific conductance data is available, and baseflowx provides a direct calibration bridge between the two approaches.
 
 ## The Calibration Workflow
 
@@ -16,11 +16,11 @@ This workflow is well-established in the literature (Stewart et al., 2007; Zhang
 
 ## Using `calibrate_eckhardt_from_cmb()`
 
-pybaseflow wraps this entire workflow into a single convenience function:
+baseflowx wraps this entire workflow into a single convenience function:
 
 ```python
-from pybaseflow.tracer import calibrate_eckhardt_from_cmb
-import pybaseflow
+from baseflowx.tracer import calibrate_eckhardt_from_cmb
+import baseflowx
 
 # Assume Q and SC are concurrent numpy arrays
 cal = calibrate_eckhardt_from_cmb(Q, SC)
@@ -32,7 +32,7 @@ print(f"SC_BF used: {cal['SC_BF']:.1f} uS/cm")
 print(f"SC_RO used: {cal['SC_RO']:.1f} uS/cm")
 
 # Apply calibrated Eckhardt to any streamflow record
-b = pybaseflow.eckhardt(Q_full_record, cal['a'], cal['BFImax'])
+b = baseflowx.eckhardt(Q_full_record, cal['a'], cal['BFImax'])
 ```
 
 If you do not provide a recession coefficient, the function estimates one automatically from the streamflow using `strict_baseflow()` and `recession_coefficient()`. You can also supply your own end-member conductivities if you have independent estimates from well sampling or other sources:
@@ -46,10 +46,10 @@ cal = calibrate_eckhardt_from_cmb(Q, SC, a=0.98, SC_BF=350, SC_RO=40)
 For more control over the process, you can run each step individually:
 
 ```python
-from pybaseflow.tracer import cmb, estimate_endmembers
-from pybaseflow.separation import strict_baseflow
-from pybaseflow.estimate import recession_coefficient
-import pybaseflow
+from baseflowx.tracer import cmb, estimate_endmembers
+from baseflowx.separation import strict_baseflow
+from baseflowx.estimate import recession_coefficient
+import baseflowx
 import numpy as np
 
 # 1. Estimate end-members from SC data
@@ -69,7 +69,7 @@ strict = strict_baseflow(Q)
 a = recession_coefficient(Q, strict)
 
 # 5. Apply calibrated Eckhardt
-b_eck = pybaseflow.eckhardt(Q, a, BFImax=BFI_ref)
+b_eck = baseflowx.eckhardt(Q, a, BFImax=BFI_ref)
 ```
 
 ## Caveats

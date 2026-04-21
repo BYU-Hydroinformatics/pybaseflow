@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit, prange
-from pybaseflow.utils import moving_average, multi_arange, backward
+from baseflowx.utils import moving_average, multi_arange, backward
 
 
 def recession_coefficient(Q, strict):
@@ -277,7 +277,7 @@ def bflow(Q, beta=0.925):
             - 'BFI_pass1': baseflow fraction from pass 1
             - 'BFI_pass2': baseflow fraction from pass 2
     """
-    from pybaseflow.separation import lh_multi
+    from baseflowx.separation import lh_multi
 
     total_Q = np.sum(Q)
 

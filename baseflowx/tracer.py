@@ -96,8 +96,8 @@ def calibrate_eckhardt_from_cmb(Q, SC, a=None, SC_BF=None, SC_RO=None,
             - 'SC_BF': baseflow end-member conductivity used
             - 'SC_RO': runoff end-member conductivity used
     """
-    from pybaseflow.separation import strict_baseflow
-    from pybaseflow.estimate import recession_coefficient
+    from baseflowx.separation import strict_baseflow
+    from baseflowx.estimate import recession_coefficient
 
     # Get CMB baseflow
     b_cmb = cmb(Q, SC, SC_BF=SC_BF, SC_RO=SC_RO,

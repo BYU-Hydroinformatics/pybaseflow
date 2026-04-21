@@ -1,8 +1,8 @@
-site_name: pybaseflow
-site_url: https://pybaseflow.readthedocs.io/en/latest/
-site_description: Documentation for the pybaseflow Python Package
+site_name: baseflowx
+site_url: https://baseflowx.readthedocs.io/en/latest/
+site_description: Documentation for the baseflowx Python Package
 site_author: Norm Jones
-repo_url: https://github.com/njones61/pybaseflow/
+repo_url: https://github.com/njones61/baseflowx/
 copyright: Copyright &copy; 2025 Norman L. Jones. Licensed under MIT.
 extra_javascript:
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-mml-chtml.js

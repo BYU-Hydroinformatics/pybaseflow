@@ -2,74 +2,74 @@
 
 ## Separation Methods
 
-::: pybaseflow.separation.lh
+::: baseflowx.separation.lh
 
-::: pybaseflow.separation.lh_multi
+::: baseflowx.separation.lh_multi
 
-::: pybaseflow.separation.eckhardt
+::: baseflowx.separation.eckhardt
 
-::: pybaseflow.separation.chapman_maxwell
+::: baseflowx.separation.chapman_maxwell
 
-::: pybaseflow.separation.chapman
+::: baseflowx.separation.chapman
 
-::: pybaseflow.separation.boughton
+::: baseflowx.separation.boughton
 
-::: pybaseflow.separation.ewma
+::: baseflowx.separation.ewma
 
-::: pybaseflow.separation.furey
+::: baseflowx.separation.furey
 
-::: pybaseflow.separation.willems
+::: baseflowx.separation.willems
 
-::: pybaseflow.separation.ihacres
+::: baseflowx.separation.ihacres
 
-::: pybaseflow.separation.what
+::: baseflowx.separation.what
 
-::: pybaseflow.separation.fixed
+::: baseflowx.separation.fixed
 
-::: pybaseflow.separation.slide
+::: baseflowx.separation.slide
 
-::: pybaseflow.separation.local
+::: baseflowx.separation.local
 
-::: pybaseflow.separation.ukih
+::: baseflowx.separation.ukih
 
-::: pybaseflow.separation.part
+::: baseflowx.separation.part
 
-::: pybaseflow.separation.strict_baseflow
+::: baseflowx.separation.strict_baseflow
 
-::: pybaseflow.separation.bn77
+::: baseflowx.separation.bn77
 
 ## Parameter Estimation
 
-::: pybaseflow.estimate.recession_coefficient
+::: baseflowx.estimate.recession_coefficient
 
-::: pybaseflow.estimate.param_calibrate
+::: baseflowx.estimate.param_calibrate
 
-::: pybaseflow.estimate.recession_period
+::: baseflowx.estimate.recession_period
 
-::: pybaseflow.estimate.maxmium_BFI
+::: baseflowx.estimate.maxmium_BFI
 
-::: pybaseflow.estimate.bflow
+::: baseflowx.estimate.bflow
 
-::: pybaseflow.estimate.bflow_recession_analysis
+::: baseflowx.estimate.bflow_recession_analysis
 
 ## Tracer-Based Methods
 
-::: pybaseflow.tracer.cmb
+::: baseflowx.tracer.cmb
 
-::: pybaseflow.tracer.estimate_endmembers
+::: baseflowx.tracer.estimate_endmembers
 
-::: pybaseflow.tracer.calibrate_eckhardt_from_cmb
+::: baseflowx.tracer.calibrate_eckhardt_from_cmb
 
 ## Data I/O
 
-::: pybaseflow.io.fetch_usgs
+::: baseflowx.io.fetch_usgs
 
-::: pybaseflow.load_sample_data
+::: baseflowx.load_sample_data
 
 ## Utilities
 
-::: pybaseflow.utils.clean_streamflow
+::: baseflowx.utils.clean_streamflow
 
-::: pybaseflow.utils.moving_average
+::: baseflowx.utils.moving_average
 
-::: pybaseflow.utils.backward
+::: baseflowx.utils.backward

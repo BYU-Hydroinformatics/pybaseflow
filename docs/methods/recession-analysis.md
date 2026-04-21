@@ -1,6 +1,6 @@
 # Recession Analysis: BFlow and Brutsaert-Nieber
 
-Recession analysis provides the foundation for parameterizing baseflow separation filters and for understanding the hydraulic properties of the aquifer system feeding a stream. This page covers two complementary approaches implemented in pybaseflow: the BFlow automated recession analysis of Arnold & Allen (1999), which estimates the SWAT alpha factor from declining baseflow segments, and the Brutsaert-Nieber (bn77) drought flow identification of Cheng et al. (2016), which isolates pure baseflow points through a rigorous set of elimination criteria. It also covers the `strict_baseflow()` heuristic, which identifies recession-dominated periods for recession coefficient estimation.
+Recession analysis provides the foundation for parameterizing baseflow separation filters and for understanding the hydraulic properties of the aquifer system feeding a stream. This page covers two complementary approaches implemented in baseflowx: the BFlow automated recession analysis of Arnold & Allen (1999), which estimates the SWAT alpha factor from declining baseflow segments, and the Brutsaert-Nieber (bn77) drought flow identification of Cheng et al. (2016), which isolates pure baseflow points through a rigorous set of elimination criteria. It also covers the `strict_baseflow()` heuristic, which identifies recession-dominated periods for recession coefficient estimation.
 
 ## BFlow: automated baseflow separation and recession analysis
 
@@ -31,7 +31,7 @@ Streams with large, transmissive aquifers will have small \(\alpha\) values and 
 The `bflow()` function runs the complete procedure -- three-pass Lyne-Hollick separation followed by recession analysis -- and returns a dictionary containing both the baseflow time series and the recession diagnostics:
 
 ```python
-from pybaseflow.estimate import bflow
+from baseflowx.estimate import bflow
 
 result = bflow(Q, beta=0.925)
 
@@ -81,7 +81,7 @@ Criterion C9 removes points where the discharge falls below a specified observat
 ### Using bn77()
 
 ```python
-from pybaseflow.separation import bn77
+from baseflowx.separation import bn77
 
 drought_points = bn77(
     Q,
@@ -103,13 +103,13 @@ The `strict_baseflow()` function provides a lighter-weight alternative for ident
 The function removes four categories of non-baseflow points. First, all timesteps where the centered derivative \(dQ/dt \geq 0\) (the hydrograph is rising or flat) are excluded. Second, a buffer zone around each rising limb is removed: two points before the start and three points after the end of each rising period. Third, five points following any major flow event (defined by the `quantile` parameter, default 0.9) are excluded to avoid the rapid recession immediately after a peak, which is dominated by quickflow rather than baseflow. Fourth, points where the recession is accelerating -- that is, where the second derivative of Q is negative -- are removed, since pure aquifer drainage should exhibit a decelerating recession.
 
 ```python
-from pybaseflow.separation import strict_baseflow
+from baseflowx.separation import strict_baseflow
 
 strict = strict_baseflow(Q, quantile=0.9)
 # strict is a boolean array: True = strict baseflow day
 ```
 
-The primary use of `strict_baseflow()` is as input to `recession_coefficient()`, which fits the recession constant from the identified baseflow periods. Together, these two functions form the standard workflow for estimating the recession parameter needed by most digital filters in pybaseflow.
+The primary use of `strict_baseflow()` is as input to `recession_coefficient()`, which fits the recession constant from the identified baseflow periods. Together, these two functions form the standard workflow for estimating the recession parameter needed by most digital filters in baseflowx.
 
 ![Recession coefficient estimation using strict baseflow identification, showing the identified recession periods and the fitted 5th-percentile slope.](../assets/figures/recession_coefficient.png)
 

@@ -43,7 +43,7 @@ def fetch_usgs(site_id, start_date, end_date, parameter='discharge'):
         ConnectionError: If the NWIS API request fails.
 
     Example:
-        >>> from pybaseflow.io import fetch_usgs
+        >>> from baseflowx.io import fetch_usgs
         >>> data = fetch_usgs('01013500', '2015-01-01', '2015-12-31')
         >>> data['values'][:5]
         array([...])

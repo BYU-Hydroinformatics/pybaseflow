@@ -1,6 +1,6 @@
-"""pybaseflow — a comprehensive Python toolkit for baseflow separation."""
+"""baseflowx — a comprehensive Python toolkit for baseflow separation."""
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 import csv
 from datetime import date
@@ -8,10 +8,10 @@ from pathlib import Path
 
 import numpy as np
 
-from pybaseflow.separation import *  # noqa: F401,F403
-from pybaseflow.estimate import *  # noqa: F401,F403
-from pybaseflow.utils import *  # noqa: F401,F403
-from pybaseflow.tracer import cmb, estimate_endmembers, calibrate_eckhardt_from_cmb  # noqa: F401
+from baseflowx.separation import *  # noqa: F401,F403
+from baseflowx.estimate import *  # noqa: F401,F403
+from baseflowx.utils import *  # noqa: F401,F403
+from baseflowx.tracer import cmb, estimate_endmembers, calibrate_eckhardt_from_cmb  # noqa: F401
 
 _DATA_DIR = Path(__file__).parent / 'data'
 
