@@ -2,7 +2,7 @@ site_name: baseflowx
 site_url: https://baseflowx.readthedocs.io/en/latest/
 site_description: Documentation for the baseflowx Python Package
 site_author: Norm Jones
-repo_url: https://github.com/njones61/baseflowx/
+repo_url: https://github.com/BYU-Hydroinformatics/baseflowx/
 copyright: Copyright &copy; 2025 Norman L. Jones. Licensed under MIT.
 extra_javascript:
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-mml-chtml.js
@@ -29,6 +29,7 @@ plugins:
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Web App: webapp.md
   - Methods:
     - Overview: methods/overview.md
     - Recursive Digital Filters: methods/digital-filters.md
