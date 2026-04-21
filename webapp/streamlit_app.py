@@ -1,12 +1,17 @@
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import pydeck as pdk
 import streamlit as st
 from dataretrieval import nwis
 
 import baseflowx as bf
+
+SQMI_TO_KM2 = 2.58999
+SITES_PATH = Path(__file__).parent / "data" / "nwis_dv_sites.parquet"
 
 st.set_page_config(page_title="Baseflow Explorer", layout="wide")
 
@@ -14,50 +19,104 @@ st.title("Baseflow Explorer")
 st.caption(
     "Compare baseflow separation methods from "
     f"[`baseflowx`](https://pypi.org/project/baseflowx/) v{bf.__version__} "
-    "on USGS daily streamflow."
+    "on USGS daily streamflow. Click a gage on the map to load it."
 )
 
 
+@st.cache_data(show_spinner=False)
+def load_sites() -> pd.DataFrame:
+    return pd.read_parquet(SITES_PATH)
+
+
 @st.cache_data(show_spinner="Fetching USGS NWIS data…")
-def fetch(site_id: str, start: date, end: date):
+def fetch_dv(site_id: str, start: date, end: date) -> pd.DataFrame:
     df, _ = nwis.get_dv(
-        sites=site_id,
-        start=str(start),
-        end=str(end),
-        parameterCd="00060",
+        sites=site_id, start=str(start), end=str(end), parameterCd="00060",
     )
     return df
 
 
+sites = load_sites()
+
+if "site_id" not in st.session_state:
+    st.session_state.site_id = "01013500"
+if "area_km2" not in st.session_state:
+    row = sites[sites.site_no == st.session_state.site_id]
+    if not row.empty and pd.notna(row.iloc[0].drain_area_sqmi):
+        st.session_state.area_km2 = float(row.iloc[0].drain_area_sqmi) * SQMI_TO_KM2
+    else:
+        st.session_state.area_km2 = 500.0
+
+# --- Map ---------------------------------------------------------------
+
+with st.container():
+    st.subheader("Pick a gage")
+
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=sites,
+        get_position="[dec_long_va, dec_lat_va]",
+        get_radius=2000,
+        radius_min_pixels=2,
+        radius_max_pixels=10,
+        get_fill_color=[30, 144, 255, 180],
+        pickable=True,
+        auto_highlight=True,
+    )
+    view_state = pdk.ViewState(latitude=39.5, longitude=-98.5, zoom=3.2)
+    tooltip = {
+        "html": "<b>{site_no}</b><br/>{station_nm}<br/>Drainage: {drain_area_sqmi} mi²",
+        "style": {"backgroundColor": "#222", "color": "#fff"},
+    }
+    deck = pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        tooltip=tooltip,
+        map_style=None,  # Carto light
+    )
+
+    event = st.pydeck_chart(
+        deck, on_select="rerun", selection_mode="single-object", height=480,
+    )
+
+    picked = None
+    if event and getattr(event, "selection", None):
+        objs = event.selection.get("objects", {}) if isinstance(event.selection, dict) else {}
+        for layer_objs in objs.values():
+            if layer_objs:
+                picked = layer_objs[0]
+                break
+
+    if picked and picked.get("site_no") and picked["site_no"] != st.session_state.site_id:
+        st.session_state.site_id = picked["site_no"]
+        drain = picked.get("drain_area_sqmi")
+        if drain is not None and pd.notna(drain):
+            st.session_state.area_km2 = float(drain) * SQMI_TO_KM2
+        st.rerun()
+
+# --- Sidebar -----------------------------------------------------------
+
 with st.sidebar:
     st.header("Data")
-    site_id = st.text_input(
+    st.text_input(
         "USGS site ID",
-        value="01013500",
-        help="USGS gage number. Default is Fish River near Fort Kent, ME.",
+        key="site_id",
+        help="Click a marker on the map, or type an 8-digit site number.",
     )
     today = date.today()
     start = st.date_input("Start", value=date(today.year - 5, 10, 1))
     end = st.date_input("End", value=today)
-    area_km2 = st.number_input(
+    st.number_input(
         "Drainage area (km²)",
         min_value=1.0,
-        value=500.0,
-        help="Used by HYSEP (fixed/slide/local) and PART methods.",
+        key="area_km2",
+        help="Used by HYSEP (fixed/slide/local) and PART. Auto-filled from NWIS when a gage is clicked.",
     )
 
     st.header("Methods")
     all_methods = [
-        "Lyne-Hollick",
-        "Eckhardt",
-        "Chapman",
-        "Chapman-Maxwell",
-        "BFlow",
-        "Fixed interval",
-        "Sliding interval",
-        "Local minimum",
-        "UKIH",
-        "PART",
+        "Lyne-Hollick", "Eckhardt", "Chapman", "Chapman-Maxwell", "BFlow",
+        "Fixed interval", "Sliding interval", "Local minimum", "UKIH", "PART",
     ]
     selected = st.multiselect(
         "Select methods",
@@ -70,19 +129,28 @@ with st.sidebar:
         a = st.slider("Recession coefficient a", 0.50, 0.999, 0.925, 0.005)
         bfi_max = st.slider("Eckhardt BFImax", 0.10, 0.95, 0.80, 0.05)
 
+site_id = st.session_state.site_id
+area_km2 = st.session_state.area_km2
+
+# --- Analysis ----------------------------------------------------------
+
+site_row = sites[sites.site_no == site_id]
+site_name = site_row.iloc[0].station_nm if not site_row.empty else "(unknown)"
+
+st.subheader(f"Analysis — {site_id}  ·  {site_name}")
 
 if start >= end:
     st.error("End date must be after start date.")
     st.stop()
 
 try:
-    df = fetch(site_id, start, end)
+    df = fetch_dv(site_id, start, end)
 except Exception as e:
     st.error(f"Failed to fetch NWIS data for site `{site_id}`: {e}")
     st.stop()
 
 if df is None or df.empty:
-    st.warning("No data returned for this gage over the selected date range.")
+    st.warning("No daily-values data for this gage over the selected date range.")
     st.stop()
 
 q_col = next(
@@ -104,10 +172,10 @@ if len(Q) < 30:
     st.stop()
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Site", site_id)
-c2.metric("Valid days", f"{len(Q):,}")
-c3.metric("Mean Q", f"{np.mean(Q):,.1f} ft³/s")
-c4.metric("Median Q", f"{np.median(Q):,.1f} ft³/s")
+c1.metric("Valid days", f"{len(Q):,}")
+c2.metric("Mean Q", f"{np.mean(Q):,.1f} ft³/s")
+c3.metric("Median Q", f"{np.median(Q):,.1f} ft³/s")
+c4.metric("Drainage", f"{area_km2:,.0f} km²")
 
 b_lh = bf.lh(Q, beta=beta)
 
@@ -137,10 +205,7 @@ if not results:
 
 fig = go.Figure()
 fig.add_trace(
-    go.Scatter(
-        x=dates, y=Q, name="Streamflow",
-        line=dict(color="black", width=1),
-    )
+    go.Scatter(x=dates, y=Q, name="Streamflow", line=dict(color="black", width=1))
 )
 for name, b in results.items():
     fig.add_trace(go.Scatter(x=dates, y=b, name=name, line=dict(width=1.5)))

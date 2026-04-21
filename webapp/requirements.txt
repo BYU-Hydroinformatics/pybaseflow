@@ -2,3 +2,5 @@ streamlit
 baseflowx>=0.2.1
 dataretrieval
 plotly
+pydeck
+pyarrow
