@@ -37,21 +37,6 @@ USGS NWIS  ──dataretrieval──>  Streamlit app  ──baseflowx──>  Pl
 - **Caching:** `@st.cache_data` on the NWIS fetch keyed by `(site_id, start, end)` so the same gage doesn't re-download.
 - **Plotting:** Plotly (interactive zoom/pan matters for hydrographs) over Matplotlib.
 
----
-
-## Prerequisite: drop numba entirely (shipped in 0.2.1)
-
-Benchmarks on realistic daily series showed numba wasn't paying for itself:
-
-- The slowest methods (`part`, `bflow`) are pure numpy and got zero speedup.
-- Methods numba did help (`fixed`, `local`, `ukih`) were already sub-millisecond at 20-year scale.
-- Cold-start JIT compile cost ~1.5s (first `fixed`: 1028 ms, first `local`: 345 ms, first `ukih`: 106 ms) — bad for Streamlit cold wakes and Pyodide.
-- Removing numba trimmed `import baseflowx` from 814 ms to 340 ms and left steady-state totals within ~30 ms at 20-year scale.
-
-So instead of an optional `[speed]` extra (which would over-promise), numba was removed: `@njit` decorators stripped, `prange` → `range`, `numba` dropped from `pyproject.toml`. Shipped as `baseflowx 0.2.1`.
-
----
-
 ## UI sketch
 
 Sidebar:
@@ -67,16 +52,14 @@ Main pane:
 
 ## Phases
 
-1. **Rename `pybaseflow` → `baseflowx`** — see `plan_rename.md`. Ship `baseflowx 0.2.0` + deprecation shim `pybaseflow 0.2.0`.
-2. **Drop numba** (prerequisite above). Shipped as `baseflowx 0.2.1`.
-3. **Scaffold Streamlit app** in a `/webapp` folder of the `baseflowx` repo.
+1. **Scaffold Streamlit app** in a `/webapp` folder of the `baseflowx` repo.
    - `streamlit_app.py`, `requirements.txt` pinning `baseflowx>=0.2.1`.
    - Minimal working version: one gage, one method, one chart.
-4. **Fill in methods + params** — wire up the full method set with per-method param controls.
-5. **Polish** — curated gage list, site metadata lookup, download buttons, BFI table.
-6. **Deploy to Streamlit Cloud** — connect repo, claim `baseflow-explorer.streamlit.app`, add badge in docs.
-7. **Link from docs** — "Try it" callout on the docs landing page and each method page.
-8. **(Later) Pyodide demo** — embed a lightweight version directly in MkDocs pages so readers can run an example without leaving the docs.
+2. **Fill in methods + params** — wire up the full method set with per-method param controls.
+3. **Polish** — curated gage list, site metadata lookup, download buttons, BFI table.
+4. **Deploy to Streamlit Cloud** — connect repo, claim `baseflow-explorer.streamlit.app`, add badge in docs.
+5. **Link from docs** — "Try it" callout on the docs landing page and each method page.
+6. **(Later) Pyodide demo** — embed a lightweight version directly in MkDocs pages so readers can run an example without leaving the docs.
 
 ## Open questions
 
