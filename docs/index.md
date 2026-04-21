@@ -7,7 +7,7 @@ pip install baseflowx
 ```
 
 !!! tip "Try it in the browser"
-    **[Baseflow Explorer](webapp.md)** is a companion web app that runs every separation method against any USGS gage — no Python install needed. Pick a gage from the map, tweak parameters, and compare methods side by side.
+    **[Baseflow Explorer](https://baseflow-explorer.onrender.com)** is a companion web app that runs every separation method against any USGS gage — no Python install needed. Pick a gage from the map, tweak parameters, and compare methods side by side. [More about the app →](webapp.md)
 
 ![Overview comparison of all 17 baseflow separation methods applied to the Fish River sample dataset.](assets/figures/overview_comparison.png)
 

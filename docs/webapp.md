@@ -2,7 +2,9 @@
 
 **Baseflow Explorer** is an interactive, map-based web front end for the `baseflowx` library. It lets anyone — no Python install required — pick a USGS stream gage, pull its daily discharge record, and compare every baseflow separation method in the library side by side.
 
-> **Status:** live deployment URL coming soon. The app lives at [`webapp/`](https://github.com/BYU-Hydroinformatics/baseflowx/tree/master/webapp) in the repo; clone the repo and run it locally via `python webapp/app.py` (see [Run locally](#run-locally) below).
+> **Live app:** [**baseflow-explorer.onrender.com**](https://baseflow-explorer.onrender.com). The instance sleeps after ~15 minutes of inactivity (free tier), so the first request after idle takes 30–60 seconds to wake.
+>
+> Source: [`webapp/`](https://github.com/BYU-Hydroinformatics/baseflowx/tree/master/webapp) in the repo. To run your own copy, see [Run locally](#run-locally) below.
 
 ## What it does
 

@@ -1,8 +1,16 @@
 # baseflowx
 
+[![PyPI](https://img.shields.io/pypi/v/baseflowx)](https://pypi.org/project/baseflowx/)
+[![Python](https://img.shields.io/pypi/pyversions/baseflowx)](https://pypi.org/project/baseflowx/)
+[![License](https://img.shields.io/pypi/l/baseflowx)](https://github.com/BYU-Hydroinformatics/baseflowx/blob/master/LICENSE)
+[![Docs](https://img.shields.io/readthedocs/baseflowx)](https://baseflowx.readthedocs.io/)
+[![Web App](https://img.shields.io/badge/web%20app-baseflow--explorer-1a73e8)](https://baseflow-explorer.onrender.com)
+
 A comprehensive Python toolkit for baseflow separation from streamflow hydrographs.
 
 baseflowx implements 17 baseflow separation methods spanning four paradigms: recursive digital filters, graphical/interval methods, recession-based methods, and tracer-based methods. It also provides parameter estimation, USGS data retrieval, and a CMB-to-Eckhardt calibration bridge.
+
+Try it in the browser: [**Baseflow Explorer**](https://baseflow-explorer.onrender.com) — pick any USGS gage on a map and compare every separation method side by side.
 
 This project builds on the [baseflow](https://github.com/xiejx5/baseflow) package by Xie et al. (2020), which implemented methods described in "Evaluation of typical methods for baseflow separation in the contiguous United States" (Journal of Hydrology, 583, 124628). baseflowx extends that work with new methods (PART, CMB, BFlow, IHACRES), a unified filter architecture, modern packaging, and USGS data integration.
 
