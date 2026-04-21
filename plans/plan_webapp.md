@@ -4,14 +4,26 @@
 
 - **Package:** `baseflowx` (renamed from `pybaseflow` — see `plan_rename.md`)
 - **Web app:** **Baseflow Explorer**
-- **Public URL target:** `baseflow-explorer.streamlit.app`
+- **Public URL target:** TBD — depends on host (see Hosting). Candidates: `baseflow-explorer.fly.dev`, `baseflow-explorer.onrender.com`, or a custom subdomain.
 
 Web app name alternates considered: *BaseflowLab*, *HydroSep*, *SepCompare*. Going with Baseflow Explorer — clear to hydrologists and students, hints at the interactive "pick a gage, see what happens" UX.
+
+## Framework decision: Flask + Leaflet, not Streamlit
+
+A Streamlit prototype was built and deployed to `baseflow-explorer.streamlit.app`. The all-method analysis + chart + CSV download work well, but the clickable CONUS gage map never became usable:
+
+- Streamlit reruns the entire Python script on every map interaction, including pan/zoom. The map iframe re-mounts, tiles re-fade, MarkerCluster re-initializes — a visible lag every time the user moves the mouse.
+- pydeck's `TileLayer` is silently dropped by Streamlit's component wrapper (verified in network tab — no ArcGIS/OSM tile requests ever leave the browser), so ArcGIS/OSM basemap options couldn't be offered.
+- folium via `streamlit-folium` renders tiles but each rerun destroys and rebuilds the iframe, so pan/zoom lag is baked in.
+
+The existing `BYU-Hydroinformatics/baseflow_analyst` repo (Flask + Jinja + Leaflet + leaflet.markercluster served from CDN) demonstrates that a map-heavy app of this kind is snappy and feels right when the map is a real client-side Leaflet page with AJAX endpoints behind it — not a server-rerun Streamlit component.
+
+**Decision:** rewrite Baseflow Explorer as a Flask + Leaflet app, keeping the scope identical to what the Streamlit version already covers (all 10 methods, NWIS fetch, Plotly chart, CSV download). The Streamlit app at `baseflow-explorer.streamlit.app` can be retired or left as a secondary "simple" interface; primary URL and docs links move to the Flask build.
 
 ## Goal
 
 A free, public web app that lets anyone:
-1. Enter a USGS stream gage ID (or pick from a short curated list).
+1. Click a gage on a CONUS map, or type a USGS site ID directly.
 2. Pull daily streamflow from NWIS for a chosen date range.
 3. Run every separation algorithm in `baseflowx` and plot the results together.
 4. Download results as CSV.
@@ -20,64 +32,107 @@ The app is a living demo — when `baseflowx` ships a new method on PyPI, a rede
 
 ## Hosting
 
-**Streamlit Community Cloud.** Free, unlimited public apps, auto-redeploys on `git push`, custom `*.streamlit.app` subdomain. Apps sleep after ~7 days idle (30s cold start on wake) — acceptable for a docs-linked demo.
+Needs to support a Python web process (no longer Streamlit-specific), so the original Streamlit Cloud plan is out. Candidate platforms:
 
-Fallback if sleep becomes a problem: Hugging Face Spaces (Streamlit SDK, no sleep, 16GB RAM free).
+- **Fly.io** — generous free tier, Dockerfile-based, WebSocket support, easy `*.fly.dev` subdomain.
+- **Render** — free tier for web services, similar `*.onrender.com` subdomain, sleeps after 15 min of inactivity (longer wake than Streamlit Cloud).
+- **Hugging Face Spaces (Docker SDK)** — free, no sleep, supports Flask via a Dockerfile.
+- **PythonAnywhere** — free tier explicitly supports Flask, never sleeps the app, but single-worker and older Python versions.
+
+Lean toward **Fly.io** — simplest deploy, fast startup, and the free tier covers a demo easily. Fallback to Hugging Face Spaces if Fly's free tier proves noisy.
 
 ## Architecture
 
 ```
-USGS NWIS  ──dataretrieval──>  Streamlit app  ──baseflowx──>  Plotly chart + CSV
-                                      │
-                                      └── @st.cache_data on NWIS pulls
+          ┌─────────────── browser ───────────────┐
+          │  Leaflet (map + MarkerCluster)        │
+          │       │                               │
+          │       └── click a gage ──┐            │
+          │                          ▼            │
+          │                    AJAX: /analyze     │
+          └──────────────────────┬────────────────┘
+                                 │
+                    ┌────────────▼────────────┐
+                    │     Flask application   │
+                    │  /                      │ ← renders index.html
+                    │  /sites.json            │ ← gage list for map
+                    │  /analyze?site_id=&...  │ ← calls baseflowx
+                    │  /static/*              │ ← css/js/snapshot
+                    └────────────┬────────────┘
+                                 │
+                     ┌───────────▼───────────┐
+                     │ baseflowx + NWIS pull │
+                     └───────────────────────┘
 ```
 
-- **Data source:** `dataretrieval.nwis.get_dv` (daily values service). No API key needed.
-- **Compute:** in-process call to `baseflowx`. For daily series (<30 years = ~11k points) every method runs well under a second.
-- **Caching:** `@st.cache_data` on the NWIS fetch keyed by `(site_id, start, end)` so the same gage doesn't re-download.
-- **Plotting:** Plotly (interactive zoom/pan matters for hydrographs) over Matplotlib.
+- **Front end:** single HTML page, Leaflet 1.9 + leaflet.markercluster from CDN, a right-side panel that slides in on gage click. Plotly.js chart rendered client-side from the JSON the analyze endpoint returns.
+- **Back end:** Flask app (`app.py`) with three JSON-returning endpoints plus the root page.
+- **Data source:** `dataretrieval.nwis.get_dv` called server-side, cached with `functools.lru_cache` keyed by `(site_id, start, end)`. Site list served from a pre-built Parquet snapshot committed under `webapp/data/`.
+- **Compute:** in-process call to `baseflowx`. Daily series at 20-year scale runs every method in well under a second (benchmarked in the 0.2.1 refactor).
+- **Deploy artifact:** a `Dockerfile` that `pip install -r requirements.txt` and runs `gunicorn app:app`.
 
 ## UI sketch
 
-Landing view is a map. Once a gage is picked (from the map or by site ID), the hydrograph + method controls take over as the main pane.
+Full-screen Leaflet map as the primary interface. Right-side panel slides in when a gage is clicked.
 
-Sidebar:
-- Gage selector: text input for site ID as a fallback/power-user path (the map is the primary picker).
+Map:
+- CONUS view on first load. Basemap selector in the top-right corner of the map (Leaflet layers control): OpenStreetMap (default), ArcGIS Topo, ArcGIS Satellite, ArcGIS Terrain, CartoDB Positron. All served as XYZ tiles, no tokens.
+- leaflet.markercluster for the 9,500 active gages (snapshot). Individual CircleMarkers at zoom ≥ 9, clusters otherwise.
+- Selected gage highlighted with a red outlined marker layered on top of the cluster.
+
+Right panel (slides in on click, hides on × or "back to map"):
+- Site header: site ID, station name, drainage area, state.
 - Date range picker (default: last 5 water years).
-- Method multi-select (default: all). Expose method-specific params behind an expander.
+- Method multi-select (default: a sensible 4–5). Parameter sliders in a collapsible section.
+- Plotly hydrograph: log-scale Q with one trace per selected method + raw streamflow.
+- BFI summary table: baseflow index per method.
+- CSV / PNG download buttons.
 
-Main pane (after a gage is selected):
-- Summary card: site name, drainage area, record period, mean Q.
-- Hydrograph: log-scale Q on y-axis, one line per selected method + the raw streamflow.
-- BFI table: baseflow index per method.
-- Download buttons: CSV of all separations, PNG of plot.
+Top bar: app title, link to docs, link to GitHub.
 
 ## Gage map
 
-The app opens on a pydeck map of every active USGS daily-values streamflow gage in CONUS (~10k–20k sites). Clicking a marker loads that gage into the analysis view.
+The CONUS gage list is pre-computed into a Parquet snapshot committed at `webapp/data/nwis_dv_sites.parquet` (already built in the Streamlit prototype, ~500 KB, 9,519 sites). The Flask app serves it via `/sites.json` on first page load; Leaflet consumes the JSON to build the marker cluster.
 
-- **Data source:** NWIS site-info service via `dataretrieval.nwis.get_info` or the equivalent REST query, filtered to sites with parameter code `00060` (discharge) and an active daily-values record. The full site list changes rarely — pull it once on first cold start and cache aggressively (`@st.cache_data(ttl=7 * 24 * 3600)`); consider pre-computing a Parquet snapshot committed to the repo if NWIS latency hurts cold starts.
-- **Rendering:** `pydeck` ScatterplotLayer over Carto basemap. GPU-backed, handles 100k+ points smoothly. No Mapbox token needed for Carto tiles.
-- **Interaction:** click a marker → site ID populates, gage data loads automatically. Hover tooltip shows site ID, site name, and drainage area. Map state (pan/zoom) persists across reruns via `st.session_state`.
-- **Fallback:** manual site-ID text input still lives in the sidebar for users who know the number they want — bypasses the map entirely.
-- **Layer styling:** single-color scatter initially. Later enhancements (phase 5): color by mean BFI for a selected method, or size by drainage area.
+- **Filter criteria:** active, daily-values, parameter code `00060` (discharge), CONUS bounding box.
+- **Snapshot refresh:** regenerated periodically by the same script used to build it initially (`webapp/build_site_snapshot.py`). Not on every deploy.
+- **Optional enhancements (later phases):** color markers by mean BFI for a selected method; size markers by drainage area; add a "curated highlights" overlay for known-interesting gages (BN77, plus a spring-fed / flashy / snowmelt-dominated set).
 
 ## Phases
 
-1. **Scaffold Streamlit app** in a `/webapp` folder of the `baseflowx` repo.
-   - `streamlit_app.py`, `requirements.txt` pinning `baseflowx>=0.2.1`.
-   - Minimal working version: one gage, one method, one chart.
-2. **Fill in methods + params** — wire up the full method set with per-method param controls.
-3. **Gage map** — pydeck map of all active CONUS daily-values gages as the landing view; click to load. Keep text-input fallback.
-4. **Polish** — site metadata auto-lookup (drainage area from NWIS), richer BFI table, PNG download for the plot.
-5. **Deploy to Streamlit Cloud** — connect repo, claim `baseflow-explorer.streamlit.app`, add badge in docs.
-6. **Link from docs** — "Try it" callout on the docs landing page and each method page.
-7. **(Later) Pyodide demo** — embed a lightweight version directly in MkDocs pages so readers can run an example without leaving the docs.
+Already shipped (Streamlit prototype work, much of it reusable):
+- `baseflowx 0.2.1` on PyPI (rename + numba removal).
+- Site snapshot Parquet at `webapp/data/nwis_dv_sites.parquet`.
+- All separation methods proven to run on live NWIS data from the browser.
+
+Remaining phases for the Flask rewrite:
+
+1. **Scaffold Flask app** in `webapp/` (replacing the Streamlit files).
+   - `app.py` with `/`, `/sites.json`, `/analyze` endpoints.
+   - `templates/index.html` with Leaflet + cluster plugin.
+   - `static/js/app.js` for map + analyze panel; `static/css/app.css` for styling.
+   - `Dockerfile` + updated `requirements.txt` (drop `streamlit`, `streamlit-folium`, `folium`; add `flask`, `gunicorn`).
+2. **Wire the map** — load snapshot, render cluster, basemap selector, click → open panel, highlight selected marker.
+3. **Wire the analysis panel** — date range + method picker + parameter sliders, AJAX to `/analyze`, render Plotly, render BFI table, CSV download.
+4. **Polish** — site metadata display, PNG download of the chart, responsive layout, loading states.
+5. **Deploy to Fly.io** — `flyctl launch`, claim the app URL, set up auto-deploy on `git push` (or GH Action). Delete the old Streamlit Cloud app.
+6. **Link from docs** — "Try it" badge/callout on the docs landing page and each method page, pointing at the new URL.
+7. **(Later) Pyodide demo** — embed a trimmed baseflowx run directly in MkDocs pages so readers can run an example without leaving the docs.
+
+## What to do with the existing Streamlit app
+
+The Streamlit version at `baseflow-explorer.streamlit.app` is functional for the non-map parts. Options:
+
+- **Retire it** after the Flask app is live and the docs link has been repointed. Simplest.
+- **Leave it up as-is** with a banner linking to the Flask version. Low effort, some redundancy.
+- **Use it for a different purpose** — e.g., a stripped-down single-gage "paste a site ID, see the chart" flow where a clickable map isn't needed.
+
+Lean toward retire once the Flask app is live. The subdomain stays reserved on the Streamlit Cloud account in case we want it later.
 
 ## Open questions
 
-- **Repo layout:** `/webapp` subfolder in `baseflowx` vs. separate `baseflow-explorer` repo. Subfolder keeps the demo in sync with the library and is simpler. Lean toward subfolder.
-- **Data fetch library:** `dataretrieval` (official USGS client, friendlier) vs. raw NWIS JSON via `requests` (fewer deps, faster cold start). Lean toward `dataretrieval`.
-- **Gage map snapshot:** fetch NWIS site list at runtime (simple, always fresh) vs. commit a Parquet snapshot to the repo (faster cold starts, occasional stale). Lean toward runtime fetch with a 7-day cache; revisit if cold starts feel slow.
-- **Curated highlights:** even with the full map, a handful of "known-interesting" gages (spring-fed, flashy, snowmelt-dominated, plus BN77) should probably be visually emphasized or listed in a "Start here" panel.
-- **Parameter UX:** defaults only, or expose method-specific sliders? Start with defaults, add sliders in phase 4.
+- **Repo layout:** `/webapp` subfolder in `baseflowx` (keeps library and demo in sync, what we have now) vs. separate `baseflow-explorer` repo (cleaner deploy story, independent versioning). Lean toward subfolder still.
+- **Data fetch library:** `dataretrieval` (official USGS client, friendlier) vs. raw NWIS JSON via `requests` (fewer deps, smaller Docker image). For a Flask app where cold-start size matters less than for Streamlit Cloud, lean toward `dataretrieval`.
+- **Snapshot refresh cadence:** manual rebuild when drift becomes obvious vs. scheduled (weekly GH Action). Start manual; revisit if stale gages become an issue.
+- **Auth / rate-limits:** none intended, but if Fly's free tier sees abuse, put the `/analyze` endpoint behind a simple per-IP rate limit.
+- **Parameter UX:** defaults only, or expose method-specific sliders? Start with defaults + one slider per filter parameter (what the Streamlit version already has); revisit after dogfooding.
